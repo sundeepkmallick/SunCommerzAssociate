@@ -22,9 +22,12 @@ Bring an AI perspective to this use case and propose an application design. Cons
 
 The following diagram illustrates the improvised final flow of the application:
 
-![Application Flow Diagram](docs/SunCommerz_flow_diagram_improvised_final.png)
+<img src="docs/SunCommerz_flow_diagram_improvised_final.png" alt="Application Flow Diagram" width="300"/>
 
-<img src="docs/SunCommerz_flow_diagram_improvised_final.png" alt="Application Flow Diagram" width="500"/>
+## Screen Flow
+
+<img src="docs/SunCommerz_screen_flow.png" alt="Application Screen Flow" width="500"/>
+
 
 
 ---
