@@ -1,7 +1,10 @@
 package com.suncommerz.associate.data.repository
 
+import com.suncommerz.associate.data.dto.OrderItemDto
+import com.suncommerz.associate.data.dto.OrderStatusDto
 import com.suncommerz.associate.data.local.FakeBackendApiResponse
 import com.suncommerz.associate.data.mapper.toDomain
+import com.suncommerz.associate.data.mapper.toDto
 import com.suncommerz.associate.domain.model.Order
 import com.suncommerz.associate.domain.model.OrderItem
 import com.suncommerz.associate.domain.model.OrderStatus
@@ -30,15 +33,7 @@ class OrderRepositoryImpl @Inject constructor(private val api: FakeBackendApiRes
 
 
     override suspend fun updateOrder(order: Order) {
-        val orderUpdate = api.orders.value.map {
-            if (it.id == order.id) {
-                order
-            } else {
-                it
-            }
-        }
 
-        api.updateOrders(orderUpdate)
     }
 
     @OptIn(ExperimentalTime::class)
@@ -48,7 +43,7 @@ class OrderRepositoryImpl @Inject constructor(private val api: FakeBackendApiRes
     ) {
         val orderUpdate = api.orders.value.map { order ->
             if (order.id == orderId) {
-                order.copy(orderStatusDto = status)
+                order.copy(orderStatusDto = OrderStatusDto.valueOf(status.name))
             } else {
                 order
             }
@@ -68,7 +63,7 @@ class OrderRepositoryImpl @Inject constructor(private val api: FakeBackendApiRes
 
             val updatedItems = order.items.map { existingItem ->
                 if (existingItem.id == item.id) {
-                    item
+                    item.toDto()
                 } else {
                     existingItem
                 }

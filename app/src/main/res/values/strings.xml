@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">SunCommerzAssociate</string>
+    <string name="screen_dashbaord">DASHBOARD</string>
+    <string name="screen_order">ORDER</string>
+    <string name="screen_order_item">ORDERITEM</string>
+    <string name="screen_ai_pickup">AIPICKUP</string>
+    <string name="back_button">Back</string>
 </resources>

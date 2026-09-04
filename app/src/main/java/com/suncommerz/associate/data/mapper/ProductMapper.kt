@@ -12,3 +12,13 @@ fun ProductDto.toDomain(): Product {
         description = description
     )
 }
+
+fun Product.toDto(): ProductDto {
+    return ProductDto(
+        id = id,
+        name = name,
+        price = price,
+        currency = currency,
+        description = description
+    )
+}
