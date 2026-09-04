@@ -1,4 +1,4 @@
-package com.suncommerz.associate.data.model
+package com.suncommerz.associate.domain.model
 
 data class Reservation(
     val id: String,

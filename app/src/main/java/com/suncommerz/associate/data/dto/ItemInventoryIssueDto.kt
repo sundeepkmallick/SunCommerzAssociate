@@ -1,9 +1,9 @@
-package com.suncommerz.associate.data.model
+package com.suncommerz.associate.data.dto
 
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
-data class ItemInventoryIssue @OptIn(ExperimentalTime::class) constructor(
+data class ItemInventoryIssueDto @OptIn(ExperimentalTime::class) constructor(
     val id: String,
     val itemId: String,
     val isManagerNotified: Boolean = false,

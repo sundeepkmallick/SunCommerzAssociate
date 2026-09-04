@@ -1,6 +1,4 @@
-package com.suncommerz.associate.data.model
-
-import android.location.Location
+package com.suncommerz.associate.domain.model
 
 data class Store(
     val id: String,

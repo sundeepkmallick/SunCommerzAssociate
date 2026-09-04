@@ -1,10 +1,10 @@
-package com.suncommerz.associate.data.model
+package com.suncommerz.associate.data.dto
 
-data class OrderItem(
+data class OrderItemDto(
     val id: String,
-    val product: Product,
+    val productDto: ProductDto,
     val requestedQuantity: Int,
-    val pickupStatus: ItemPickupStatus = ItemPickupStatus.PENDING,
+    val pickupStatus: ItemPickupStatusDto = ItemPickupStatusDto.PENDING,
     val pickedQuantity: Int = 0,
     val selectedSubstituteId: String? = null,
     val reservedStoreId: String? = null,
