@@ -1,18 +1,17 @@
 package com.suncommerz.associate.domain.repository
 
-import com.suncommerz.associate.data.dto.InventoryRecordDto
 import com.suncommerz.associate.domain.model.InventoryRecord
 import kotlinx.coroutines.flow.Flow
 
 interface InventoryRepository {
     fun observeInventory(
         storeId: String
-    ): Flow<List<InventoryRecordDto>>
+    ): Flow<List<InventoryRecord>>
 
     fun observeProductInventory(
         storeId: String,
         productId: String
-    ): Flow<InventoryRecordDto?>
+    ): Flow<InventoryRecord?>
 
     suspend fun updateStock(
         storeId: String,

@@ -1,8 +1,8 @@
 package com.suncommerz.associate.domain.repository
 
-import com.suncommerz.associate.data.dto.StoreAssociateDto
+import com.suncommerz.associate.domain.model.StoreAssociate
 import kotlinx.coroutines.flow.Flow
 
 interface UserRepository {
-    fun observeLoggedInAssociate(): Flow<StoreAssociateDto?>
+    fun observeLoggedInAssociate(): Flow<StoreAssociate?>
 }

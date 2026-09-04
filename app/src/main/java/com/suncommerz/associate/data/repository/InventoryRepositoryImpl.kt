@@ -1,10 +1,10 @@
 package com.suncommerz.associate.data.repository
 
-import com.suncommerz.associate.data.dto.InventoryRecordDto
 import com.suncommerz.associate.data.local.FakeBackendApiResponse
+import com.suncommerz.associate.data.mapper.toDomain
+import com.suncommerz.associate.domain.model.InventoryRecord
 import com.suncommerz.associate.domain.repository.InventoryRepository
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -12,10 +12,12 @@ import javax.inject.Singleton
 @Singleton
 class InventoryRepositoryImpl @Inject constructor(val api: FakeBackendApiResponse): InventoryRepository {
 
-    override fun observeInventory(storeId: String): Flow<List<InventoryRecordDto>> {
-        return api.inventoryRecords.map { inventoryRecords ->
-            inventoryRecords.filter {
+    override fun observeInventory(storeId: String): Flow<List<InventoryRecord>> {
+        return api.inventoryRecords.map { inventoryRecordDtos ->
+            inventoryRecordDtos.filter {
                 it.storeId == storeId
+            }.map { inventoryRecordDtos ->
+                inventoryRecordDtos.toDomain()
             }
         }
     }
@@ -23,11 +25,11 @@ class InventoryRepositoryImpl @Inject constructor(val api: FakeBackendApiRespons
     override fun observeProductInventory(
         storeId: String,
         productId: String
-    ): Flow<InventoryRecordDto?> {
+    ): Flow<InventoryRecord?> {
         return api.inventoryRecords.map { inventoryRecords ->
             inventoryRecords.find {
                 it.storeId == storeId && it.productId == productId
-            }
+            }?.toDomain()
         }
     }
 

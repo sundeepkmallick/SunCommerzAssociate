@@ -97,7 +97,7 @@ object FakeBackendData {
     val orders = listOf(
         OrderDto(
             id = "ORD-1001",
-            status = OrderStatusDto.READY,
+            orderStatusDto = OrderStatusDto.READY,
             orderDateTime = Instant.parse("2026-09-04T07:45:00Z"),
             storeDto = StoreDto("93", "Store #93", CoordinateDto(52.5208, 13.4095)),
             items = listOf(
@@ -109,7 +109,7 @@ object FakeBackendData {
         ),
         OrderDto(
             id = "ORD-1002",
-            status = OrderStatusDto.PICKING,
+            orderStatusDto = OrderStatusDto.PICKING,
             orderDateTime = Instant.parse("2026-09-04T08:20:00Z"),
             storeDto = StoreDto("94", "Store #94", CoordinateDto(52.5096, 13.3769)),
             items = listOf(
@@ -121,7 +121,7 @@ object FakeBackendData {
         ),
         OrderDto(
             id = "ORD-1003",
-            status = OrderStatusDto.INCOMPLETE,
+            orderStatusDto = OrderStatusDto.INCOMPLETE,
             orderDateTime = Instant.parse("2026-09-04T06:30:00Z"),
             storeDto = StoreDto("95", "Store #95", CoordinateDto(52.5322, 13.3849)),
             items = listOf(
@@ -141,7 +141,7 @@ object FakeBackendData {
         ),
         OrderDto(
             id = "ORD-1004",
-            status = OrderStatusDto.PENDING,
+            orderStatusDto = OrderStatusDto.PENDING,
             orderDateTime = Instant.parse("2026-09-04T08:55:00Z"),
             storeDto = StoreDto("96", "Store #96", CoordinateDto(52.4997, 13.4447)),
             items = listOf(
@@ -153,7 +153,7 @@ object FakeBackendData {
         ),
         OrderDto(
             id = "ORD-1005",
-            status = OrderStatusDto.INCOMPLETE,
+            orderStatusDto = OrderStatusDto.INCOMPLETE,
             orderDateTime = Instant.parse("2026-09-03T17:15:00Z"),
             storeDto = StoreDto("97", "Store #97", CoordinateDto(52.5478, 13.4156)),
             items = listOf(
@@ -180,7 +180,7 @@ object FakeBackendData {
         ),
         OrderDto(
             id = "ORD-1006",
-            status = OrderStatusDto.READY,
+            orderStatusDto = OrderStatusDto.READY,
             orderDateTime = Instant.parse("2026-09-03T14:30:00Z"),
             storeDto = StoreDto("98", "Store #98", CoordinateDto(52.4839, 13.4331)),
             items = listOf(
@@ -193,7 +193,7 @@ object FakeBackendData {
         ),
         OrderDto(
             id = "ORD-1007",
-            status = OrderStatusDto.PICKING,
+            orderStatusDto = OrderStatusDto.PICKING,
             orderDateTime = Instant.parse("2026-09-03T12:10:00Z"),
             storeDto = StoreDto("99", "Store #99", CoordinateDto(52.5612, 13.3287)),
             items = listOf(
@@ -206,7 +206,7 @@ object FakeBackendData {
         ),
         OrderDto(
             id = "ORD-1008",
-            status = OrderStatusDto.INCOMPLETE,
+            orderStatusDto = OrderStatusDto.INCOMPLETE,
             orderDateTime = Instant.parse("2026-09-02T16:40:00Z"),
             storeDto = StoreDto("93", "Store #93", CoordinateDto(52.5208, 13.4095)),
             items = listOf(

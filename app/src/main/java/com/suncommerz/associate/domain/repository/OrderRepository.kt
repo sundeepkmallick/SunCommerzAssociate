@@ -1,25 +1,25 @@
 package com.suncommerz.associate.domain.repository
 
-import com.suncommerz.associate.data.dto.OrderDto
-import com.suncommerz.associate.data.dto.OrderItemDto
-import com.suncommerz.associate.data.dto.OrderStatusDto
+import com.suncommerz.associate.domain.model.Order
+import com.suncommerz.associate.domain.model.OrderItem
+import com.suncommerz.associate.domain.model.OrderStatus
 import kotlinx.coroutines.flow.Flow
 
 interface OrderRepository {
-    fun observeOrders(): Flow<List<OrderDto>>
+    fun observeOrders(): Flow<List<Order>>
 
-    fun observeOrder(orderId: String): Flow<OrderDto?>
+    fun observeOrder(orderId: String): Flow<Order?>
 
-    suspend fun updateOrder(order: OrderDto)
+    suspend fun updateOrder(order: Order)
 
     suspend fun updateOrderStatus(
         orderId: String,
-        status: OrderStatusDto
+        status: OrderStatus
     )
 
     suspend fun updateOrderItem(
         orderId: String,
-        item: OrderItemDto
+        item: OrderItem
     )
 
 }

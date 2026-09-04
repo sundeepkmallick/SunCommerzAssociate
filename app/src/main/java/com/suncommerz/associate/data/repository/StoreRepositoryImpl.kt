@@ -1,9 +1,11 @@
 package com.suncommerz.associate.data.repository
 
 import android.location.Location
-import com.suncommerz.associate.data.dto.CoordinateDto
 import com.suncommerz.associate.data.dto.StoreDto
 import com.suncommerz.associate.data.local.FakeBackendApiResponse
+import com.suncommerz.associate.data.mapper.toDomain
+import com.suncommerz.associate.domain.model.Coordinate
+import com.suncommerz.associate.domain.model.Store
 import com.suncommerz.associate.domain.repository.StoreRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -12,28 +14,32 @@ import javax.inject.Singleton
 
 @Singleton
 class StoreRepositoryImpl @Inject constructor(val apiResponse: FakeBackendApiResponse): StoreRepository {
-    override fun observeStores(): Flow<List<StoreDto>> {
-        return apiResponse.stores
+    override fun observeStores(): Flow<List<Store>> {
+        return apiResponse.stores.map { storeDtos ->
+            storeDtos.map { storeDto ->
+                storeDto.toDomain()
+            }
+        }
     }
 
-    override fun getStore(storeId: String): Flow<StoreDto?> {
+    override fun getStore(storeId: String): Flow<Store?> {
         return apiResponse.stores.map { stores ->
-            stores.find { it.id == storeId }
+            stores.find { it.id == storeId }?.toDomain()
         }
     }
 
     override suspend fun getNearbyStores(
-        locationCurrentStore: CoordinateDto,
+        locationCurrentStore: Coordinate,
         radiusMeters: Double
     ): List<StoreDto> {
         return apiResponse.stores.value.filter { store ->
-            calculateDistance(locationCurrentStore, store.location) <= radiusMeters
+            calculateDistance(locationCurrentStore, store.toDomain().location) <= radiusMeters
         }
     }
 
     fun calculateDistance(
-        currentStore: CoordinateDto,
-        otherStore: CoordinateDto
+        currentStore: Coordinate,
+        otherStore: Coordinate
     ): Float {
         val result = FloatArray(1)
 
