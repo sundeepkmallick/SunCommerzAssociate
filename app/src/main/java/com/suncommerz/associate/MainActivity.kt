@@ -5,7 +5,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.suncommerz.associate.ui.SunCommerzAssociateScreen
-import com.suncommerz.associate.ui.navigation.SunCommerzAssociateNav
 import com.suncommerz.associate.ui.theme.SunCommerzAssociateTheme
 import dagger.hilt.android.AndroidEntryPoint
 

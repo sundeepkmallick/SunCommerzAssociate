@@ -5,4 +5,7 @@
     <string name="screen_order_item">ORDERITEM</string>
     <string name="screen_ai_pickup">AIPICKUP</string>
     <string name="back_button">Back</string>
+    <string name="order_items_label">%s items</string>
+    <string name="right_arrow">Rigth Arrow</string>
+    <string name="filter_none">All</string>
 </resources>
