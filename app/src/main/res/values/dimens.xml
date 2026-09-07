@@ -2,7 +2,9 @@
 <resources>
     <dimen name="app_progressbar">64dp</dimen>
     <dimen name="padding_extra_small">2dp</dimen>
-    <dimen name="padding_small">8dp</dimen>
+    <dimen name="padding_small">4dp</dimen>
+    <dimen name="padding">8dp</dimen>
+    <dimen name="padding_large">32dp</dimen>
     <dimen name="order_list_item_inner_padding">18dp</dimen>
     <dimen name="list_item_card_elevation">2dp</dimen>
 </resources>

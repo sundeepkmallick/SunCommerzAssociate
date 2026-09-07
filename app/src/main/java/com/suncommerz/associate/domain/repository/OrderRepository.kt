@@ -10,6 +10,8 @@ interface OrderRepository {
 
     fun observeOrder(orderId: String): Flow<Order?>
 
+    fun observeOrderItem(orderItemId: String, orderId: String): Flow<OrderItem?>
+
     suspend fun updateOrder(order: Order)
 
     suspend fun updateOrderStatus(

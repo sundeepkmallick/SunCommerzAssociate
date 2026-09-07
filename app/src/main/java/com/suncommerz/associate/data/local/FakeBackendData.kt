@@ -6,13 +6,16 @@ import com.suncommerz.associate.data.dto.ItemPickupStatusDto
 import com.suncommerz.associate.data.dto.OrderDto
 import com.suncommerz.associate.data.dto.OrderItemDto
 import com.suncommerz.associate.data.dto.OrderStatusDto
+import com.suncommerz.associate.data.dto.ProductCategoryDto
 import com.suncommerz.associate.data.dto.ProductDto
 import com.suncommerz.associate.data.dto.StoreDto
 import com.suncommerz.associate.data.dto.StoreAssociateDto
+import com.suncommerz.associate.data.dto.SubstitutionHistoryDto
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
 object FakeBackendData {
+
     val stores = listOf(
         StoreDto("93", "Store #93", CoordinateDto(52.5208, 13.4095)),
         StoreDto("94", "Store #94", CoordinateDto(52.5096, 13.3769)),
@@ -27,207 +30,580 @@ object FakeBackendData {
     val loggedInAssociate = StoreAssociateDto("7", "emp007")
 
     val products = listOf(
-        ProductDto("1", "Milk", 1.19, "EUR", "Fresh whole milk, 1 liter"),
-        ProductDto("2", "Bread", 1.49, "EUR", "Freshly baked wheat bread, 500 g"),
-        ProductDto("3", "Eggs", 2.49, "EUR", "Free-range eggs, pack of 10"),
-        ProductDto("4", "Butter", 2.39, "EUR", "Creamy salted butter, 250 g"),
-        ProductDto("5", "Cheese", 3.29, "EUR", "Mild Gouda cheese, 200 g"),
-        ProductDto("6", "Apples", 2.49, "EUR", "Fresh red apples, 1 kg"),
-        ProductDto("7", "Bananas", 1.69, "EUR", "Fresh bananas, 1 kg"),
-        ProductDto("8", "Oranges", 2.29, "EUR", "Juicy oranges, 1 kg"),
-        ProductDto("9", "Tomatoes", 2.99, "EUR", "Fresh vine tomatoes, 500 g"),
-        ProductDto("10", "Potatoes", 2.49, "EUR", "German potatoes, 2 kg"),
-        ProductDto("11", "Carrots", 1.29, "EUR", "Fresh carrots, 1 kg"),
-        ProductDto("12", "Onions", 1.39, "EUR", "Yellow onions, 1 kg"),
-        ProductDto("13", "Chicken Breast", 6.99, "EUR", "Fresh chicken breast, 500 g"),
-        ProductDto("14", "Ground Beef", 5.49, "EUR", "Fresh ground beef, 500 g"),
-        ProductDto("15", "Salmon", 8.99, "EUR", "Fresh salmon fillet, 250 g"),
-        ProductDto("16", "Rice", 2.19, "EUR", "Long-grain rice, 1 kg"),
-        ProductDto("17", "Pasta", 1.29, "EUR", "Durum wheat pasta, 500 g"),
-        ProductDto("18", "Olive Oil", 7.49, "EUR", "Extra virgin olive oil, 500 ml"),
-        ProductDto("19", "Coffee", 6.99, "EUR", "Ground coffee, 500 g"),
-        ProductDto("20", "Orange Juice", 2.49, "EUR", "100% orange juice, 1 liter"),
-        ProductDto("21", "Mineral Water", 3.99, "EUR", "Natural mineral water, 6 × 1.5 L"),
-        ProductDto("22", "Coca-Cola", 2.29, "EUR", "Coca-Cola, 1.5 liter"),
-        ProductDto("23", "Yogurt", 1.79, "EUR", "Natural yogurt, 500 g"),
-        ProductDto("24", "Cereal", 3.49, "EUR", "Whole grain breakfast cereal, 500 g"),
-        ProductDto("25", "Chocolate", 1.29, "EUR", "Milk chocolate bar, 100 g")
-    )
+        // 1 - Original product has substitutes
+        ProductDto(
+            id = "1",
+            name = "Whole Milk",
+            price = 1.19,
+            currency = "EUR",
+            description = "Fresh whole milk, 1 liter",
+            categoryDto = ProductCategoryDto.DAIRY,
+            ingredients = listOf("Milk"),
+            attributes = mapOf(
+                "volume" to "1L",
+                "fat" to "3.5%",
+                "type" to "whole-milk"
+            ),
+            substituteProductIds = listOf("2", "3", "4")
+        ),
 
+        // 2 - Substitute for Whole Milk
+        ProductDto(
+            id = "2",
+            name = "Lactose-Free Milk",
+            price = 1.49,
+            currency = "EUR",
+            description = "Lactose-free whole milk, 1 liter",
+            categoryDto = ProductCategoryDto.DAIRY,
+            ingredients = listOf("Milk", "Lactase"),
+            attributes = mapOf(
+                "volume" to "1L",
+                "fat" to "3.5%",
+                "type" to "lactose-free-milk"
+            ),
+            substituteProductIds = listOf("1", "3", "4")
+        ),
+
+        // 3 - Substitute for Whole Milk
+        ProductDto(
+            id = "3",
+            name = "Oat Milk",
+            price = 2.29,
+            currency = "EUR",
+            description = "Plant-based oat drink, 1 liter",
+            categoryDto = ProductCategoryDto.DAIRY,
+            ingredients = listOf(
+                "Water",
+                "Oats",
+                "Sunflower Oil",
+                "Salt"
+            ),
+            attributes = mapOf(
+                "volume" to "1L",
+                "type" to "plant-based-milk",
+                "diet" to "vegan"
+            ),
+            substituteProductIds = listOf("1", "2", "4")
+        ),
+
+        // 4 - Substitute for Whole Milk
+        ProductDto(
+            id = "4",
+            name = "Soy Milk",
+            price = 2.19,
+            currency = "EUR",
+            description = "Plant-based soy drink, 1 liter",
+            categoryDto = ProductCategoryDto.DAIRY,
+            ingredients = listOf(
+                "Water",
+                "Soybeans",
+                "Calcium",
+                "Salt"
+            ),
+            attributes = mapOf(
+                "volume" to "1L",
+                "type" to "plant-based-milk",
+                "diet" to "vegan"
+            ),
+            substituteProductIds = listOf("1", "2", "3")
+        ),
+
+        // 5 - Original product with substitute
+        ProductDto(
+            id = "5",
+            name = "Butter",
+            price = 2.39,
+            currency = "EUR",
+            description = "Creamy salted butter, 250 g",
+            categoryDto = ProductCategoryDto.DAIRY,
+            ingredients = listOf("Cream", "Salt"),
+            attributes = mapOf(
+                "weight" to "250g",
+                "type" to "butter",
+                "salted" to "true"
+            ),
+            substituteProductIds = listOf("6")
+        ),
+
+        // 6 - Substitute for Butter
+        ProductDto(
+            id = "6",
+            name = "Margarine",
+            price = 1.79,
+            currency = "EUR",
+            description = "Soft vegetable margarine, 250 g",
+            categoryDto = ProductCategoryDto.DAIRY,
+            ingredients = listOf(
+                "Vegetable Oils",
+                "Water",
+                "Salt"
+            ),
+            attributes = mapOf(
+                "weight" to "250g",
+                "type" to "butter-alternative"
+            ),
+            substituteProductIds = listOf("5")
+        ),
+
+        // 7 - Product that can be unavailable in one store
+        ProductDto(
+            id = "7",
+            name = "Ground Coffee",
+            price = 6.99,
+            currency = "EUR",
+            description = "Ground coffee, 500 g",
+            categoryDto = ProductCategoryDto.GROCERY,
+            ingredients = listOf("Roasted Coffee Beans"),
+            attributes = mapOf(
+                "weight" to "500g",
+                "type" to "ground-coffee",
+                "caffeine" to "regular"
+            ),
+            substituteProductIds = listOf("8")
+        ),
+
+        // 8 - Coffee substitute
+        ProductDto(
+            id = "8",
+            name = "Decaf Coffee",
+            price = 7.49,
+            currency = "EUR",
+            description = "Ground decaffeinated coffee, 500 g",
+            categoryDto = ProductCategoryDto.GROCERY,
+            ingredients = listOf(
+                "Decaffeinated Roasted Coffee Beans"
+            ),
+            attributes = mapOf(
+                "weight" to "500g",
+                "type" to "ground-coffee",
+                "caffeine" to "decaf"
+            ),
+            substituteProductIds = listOf("7")
+        ),
+
+        // 9 - Original product that may need nearby-store search
+        ProductDto(
+            id = "9",
+            name = "Pasta",
+            price = 1.29,
+            currency = "EUR",
+            description = "Durum wheat pasta, 500 g",
+            categoryDto = ProductCategoryDto.GROCERY,
+            ingredients = listOf(
+                "Durum Wheat Semolina",
+                "Water"
+            ),
+            attributes = mapOf(
+                "weight" to "500g",
+                "type" to "regular-pasta"
+            ),
+            substituteProductIds = listOf("10")
+        ),
+
+        // 10 - Pasta substitute
+        ProductDto(
+            id = "10",
+            name = "Gluten-Free Pasta",
+            price = 2.49,
+            currency = "EUR",
+            description = "Gluten-free corn and rice pasta, 500 g",
+            categoryDto = ProductCategoryDto.GROCERY,
+            ingredients = listOf(
+                "Corn Flour",
+                "Rice Flour",
+                "Water"
+            ),
+            attributes = mapOf(
+                "weight" to "500g",
+                "type" to "gluten-free-pasta"
+            ),
+            substituteProductIds = listOf("9")
+        ),
+
+        // 11 - Product intentionally unavailable at assigned store
+        // but available at a nearby store.
+        ProductDto(
+            id = "11",
+            name = "Salmon Fillet",
+            price = 8.99,
+            currency = "EUR",
+            description = "Fresh salmon fillet, 250 g",
+            categoryDto = ProductCategoryDto.MEAT,
+            ingredients = listOf("Salmon"),
+            attributes = mapOf(
+                "weight" to "250g",
+                "type" to "fresh-fish"
+            ),
+            substituteProductIds = emptyList()
+        ),
+
+        // 12 - Product intentionally unavailable at assigned store
+        // but available at another nearby store.
+        ProductDto(
+            id = "12",
+            name = "Chicken Breast",
+            price = 6.99,
+            currency = "EUR",
+            description = "Fresh chicken breast, 500 g",
+            categoryDto = ProductCategoryDto.MEAT,
+            ingredients = listOf("Chicken"),
+            attributes = mapOf(
+                "weight" to "500g",
+                "type" to "fresh-chicken"
+            ),
+            substituteProductIds = emptyList()
+        )
+    )
 
     val inventoryRecords = listOf(
-        InventoryRecordDto("1", "93", 24),
-        InventoryRecordDto("2", "93", 12),
-        InventoryRecordDto("3", "93", 4),
-        InventoryRecordDto("4", "93", 18),
-        InventoryRecordDto("5", "93", 7),
-        InventoryRecordDto("6", "94", 32),
-        InventoryRecordDto("7", "94", 3),
-        InventoryRecordDto("8", "94", 15),
-        InventoryRecordDto("9", "94", 21),
-        InventoryRecordDto("10", "94", 8),
-        InventoryRecordDto("11", "95", 19),
-        InventoryRecordDto("12", "95", 6),
-        InventoryRecordDto("13", "95", 4),
-        InventoryRecordDto("14", "95", 11),
-        InventoryRecordDto("15", "95", 2),
-        InventoryRecordDto("16", "96", 25),
-        InventoryRecordDto("17", "96", 14),
-        InventoryRecordDto("18", "96", 9),
-        InventoryRecordDto("19", "96", 3),
-        InventoryRecordDto("20", "96", 17),
-        InventoryRecordDto("21", "97", 40),
-        InventoryRecordDto("22", "97", 22),
-        InventoryRecordDto("23", "97", 5),
-        InventoryRecordDto("24", "97", 13),
-        InventoryRecordDto("25", "97", 7),
-        InventoryRecordDto("1", "98", 18),
-        InventoryRecordDto("2", "98", 9),
-        InventoryRecordDto("3", "98", 2),
-        InventoryRecordDto("4", "98", 16),
-        InventoryRecordDto("5", "98", 6),
-        InventoryRecordDto("6", "99", 27),
-        InventoryRecordDto("7", "99", 4),
-        InventoryRecordDto("8", "99", 13),
-        InventoryRecordDto("9", "99", 8),
-        InventoryRecordDto("10", "99", 3)
+
+        // ---------------------------------------------------------
+        // Store #93
+        // ---------------------------------------------------------
+
+        InventoryRecordDto("1", "93", 0),   // Whole Milk unavailable
+        InventoryRecordDto("2", "93", 8),   // Lactose-Free Milk
+        InventoryRecordDto("3", "93", 12),  // Oat Milk
+        InventoryRecordDto("4", "93", 4),   // Soy Milk
+
+        // ---------------------------------------------------------
+        // Store #94
+        // ---------------------------------------------------------
+
+        InventoryRecordDto("5", "94", 0),   // Butter unavailable
+        InventoryRecordDto("6", "94", 15),  // Margarine available
+
+        InventoryRecordDto("7", "94", 0),   // Coffee unavailable
+        InventoryRecordDto("8", "94", 6),   // Decaf Coffee available
+
+        // ---------------------------------------------------------
+        // Store #95 - ASSIGNED STORE
+        // ---------------------------------------------------------
+
+        // Substitution scenario
+        InventoryRecordDto("1", "95", 0),   // Milk unavailable
+        InventoryRecordDto("2", "95", 2),   // Lactose-Free Milk available
+        InventoryRecordDto("3", "95", 7),   // Oat Milk available
+        InventoryRecordDto("4", "95", 4),   // Soy Milk available
+
+        // Nearby-store scenario
+        InventoryRecordDto("9", "95", 0),   // Pasta unavailable
+        InventoryRecordDto("10", "95", 0),  // Substitute ALSO unavailable
+
+        InventoryRecordDto("11", "95", 0),  // Salmon unavailable
+        InventoryRecordDto("12", "95", 0),  // Chicken unavailable
+
+        // ---------------------------------------------------------
+        // Store #96 - Nearby store
+        // ---------------------------------------------------------
+
+        InventoryRecordDto("9", "96", 12),  // Pasta available nearby
+        InventoryRecordDto("10", "96", 5),   // Gluten-Free Pasta
+
+        InventoryRecordDto("11", "96", 4),   // Salmon available nearby
+        InventoryRecordDto("12", "96", 0),   // Chicken unavailable here
+
+        // ---------------------------------------------------------
+        // Store #97 - Another nearby store
+        // ---------------------------------------------------------
+
+        InventoryRecordDto("11", "97", 0),   // Salmon unavailable
+        InventoryRecordDto("12", "97", 8),   // Chicken available nearby
+
+        // ---------------------------------------------------------
+        // Store #98
+        // ---------------------------------------------------------
+
+        InventoryRecordDto("7", "98", 10),  // Coffee
+        InventoryRecordDto("8", "98", 3),   // Decaf Coffee
+
+        // ---------------------------------------------------------
+        // Store #99
+        // ---------------------------------------------------------
+
+        InventoryRecordDto("5", "99", 8),   // Butter
+        InventoryRecordDto("6", "99", 5)    // Margarine
     )
 
+
+    /**
+     * Historical substitution behavior.
+     *
+     * This data can be used to demonstrate personalized recommendations.
+     */
+    val substitutionHistory = listOf(
+
+        // Customer 101 usually accepts Oat Milk when Milk is unavailable.
+        SubstitutionHistoryDto(
+            customerId = "101",
+            originalProductId = "1",
+            substituteProductId = "3",
+            accepted = true,
+            orderDateTime = Instant.parse("2026-08-20T09:15:00Z")
+        ),
+        SubstitutionHistoryDto(
+            customerId = "101",
+            originalProductId = "1",
+            substituteProductId = "3",
+            accepted = true,
+            orderDateTime = Instant.parse("2026-08-27T10:20:00Z")
+        ),
+        SubstitutionHistoryDto(
+            customerId = "101",
+            originalProductId = "1",
+            substituteProductId = "2",
+            accepted = false,
+            orderDateTime = Instant.parse("2026-08-30T11:10:00Z")
+        ),
+
+        // Customer 102 prefers Margarine as a Butter substitute.
+        SubstitutionHistoryDto(
+            customerId = "102",
+            originalProductId = "5",
+            substituteProductId = "6",
+            accepted = true,
+            orderDateTime = Instant.parse("2026-08-22T08:30:00Z")
+        ),
+        SubstitutionHistoryDto(
+            customerId = "102",
+            originalProductId = "5",
+            substituteProductId = "6",
+            accepted = true,
+            orderDateTime = Instant.parse("2026-08-29T09:45:00Z")
+        ),
+
+        // Customer 103 accepted Whole Grain Bread previously.
+        SubstitutionHistoryDto(
+            customerId = "103",
+            originalProductId = "7",
+            substituteProductId = "8",
+            accepted = true,
+            orderDateTime = Instant.parse("2026-08-25T14:20:00Z")
+        )
+    )
+
+    /**
+     * Orders demonstrate different substitution scenarios.
+     */
     @OptIn(ExperimentalTime::class)
     val orders = listOf(
+
+        // ---------------------------------------------------------
+        // Order 1001 - Milk unavailable, Oat Milk substituted
+        // ---------------------------------------------------------
         OrderDto(
             id = "ORD-1001",
             orderStatusDto = OrderStatusDto.READY,
             orderDateTime = Instant.parse("2026-09-04T07:45:00Z"),
-            storeDto = StoreDto("93", "Store #93", CoordinateDto(52.5208, 13.4095)),
+            storeDto = storeById("93")!!,
             items = listOf(
-                OrderItemDto("OI-1001", products[0], 2, ItemPickupStatusDto.PICKED, 2),
-                OrderItemDto("OI-1002", products[2], 1, ItemPickupStatusDto.PICKED, 1),
-                OrderItemDto("OI-1003", products[6], 1, ItemPickupStatusDto.PICKED, 1)
-            ),
-            assignedAssociate = loggedInAssociate
-        ),
-        OrderDto(
-            id = "ORD-1002",
-            orderStatusDto = OrderStatusDto.PICKING,
-            orderDateTime = Instant.parse("2026-09-04T08:20:00Z"),
-            storeDto = StoreDto("94", "Store #94", CoordinateDto(52.5096, 13.3769)),
-            items = listOf(
-                OrderItemDto("OI-1004", products[5], 2, ItemPickupStatusDto.PICKED, 2),
-                OrderItemDto("OI-1005", products[7], 1, ItemPickupStatusDto.PENDING),
-                OrderItemDto("OI-1006", products[9], 1, ItemPickupStatusDto.PENDING)
-            ),
-            assignedAssociate = loggedInAssociate
-        ),
-        OrderDto(
-            id = "ORD-1003",
-            orderStatusDto = OrderStatusDto.INCOMPLETE,
-            orderDateTime = Instant.parse("2026-09-04T06:30:00Z"),
-            storeDto = StoreDto("95", "Store #95", CoordinateDto(52.5322, 13.3849)),
-            items = listOf(
-                OrderItemDto("OI-1007", products[10], 2, ItemPickupStatusDto.PICKED, 2),
-                OrderItemDto("OI-1008", products[12], 2, ItemPickupStatusDto.PICKED, 2),
                 OrderItemDto(
-                    "OI-1009",
-                    products[14],
-                    1,
-                    ItemPickupStatusDto.UNAVAILABLE,
-                    0,
-                    managerNotified = true,
-                    customerNotified = true
-                )
-            ),
-            assignedAssociate = loggedInAssociate
-        ),
-        OrderDto(
-            id = "ORD-1004",
-            orderStatusDto = OrderStatusDto.PENDING,
-            orderDateTime = Instant.parse("2026-09-04T08:55:00Z"),
-            storeDto = StoreDto("96", "Store #96", CoordinateDto(52.4997, 13.4447)),
-            items = listOf(
-                OrderItemDto("OI-1010", products[15], 1),
-                OrderItemDto("OI-1011", products[16], 2),
-                OrderItemDto("OI-1012", products[17], 1)
-            ),
-            assignedAssociate = loggedInAssociate
-        ),
-        OrderDto(
-            id = "ORD-1005",
-            orderStatusDto = OrderStatusDto.INCOMPLETE,
-            orderDateTime = Instant.parse("2026-09-03T17:15:00Z"),
-            storeDto = StoreDto("97", "Store #97", CoordinateDto(52.5478, 13.4156)),
-            items = listOf(
-                OrderItemDto("OI-1013", products[20], 2, ItemPickupStatusDto.PICKED, 2),
-                OrderItemDto(
-                    "OI-1014",
-                    products[22],
-                    3,
-                    ItemPickupStatusDto.SUBSTITUTE,
-                    2,
-                    selectedSubstituteId = "5"
+                    id = "OI-1001",
+                    orderIdDto = "ORD-1001",
+                    productDto = products[0], // Milk
+                    quantity = 2,
+                    pickupStatus = ItemPickupStatusDto.SUBSTITUTE,
+                    pickedQuantity = 2,
+                    selectedSubstituteId = "3"
                 ),
                 OrderItemDto(
-                    "OI-1015",
-                    products[23],
-                    1,
-                    ItemPickupStatusDto.UNAVAILABLE,
-                    0,
-                    managerNotified = true,
-                    customerNotified = true
+                    id = "OI-1002",
+                    orderIdDto = "ORD-1001",
+                    productDto = products[7], // Whole Grain Bread
+                    quantity = 1,
+                    pickupStatus = ItemPickupStatusDto.PICKED,
+                    pickedQuantity = 1
                 )
             ),
             assignedAssociate = loggedInAssociate
         ),
+
+        // ---------------------------------------------------------
+        // Order 1002 - Butter unavailable, Margarine substituted
+        // ---------------------------------------------------------
         OrderDto(
-            id = "ORD-1006",
-            orderStatusDto = OrderStatusDto.READY,
-            orderDateTime = Instant.parse("2026-09-03T14:30:00Z"),
-            storeDto = StoreDto("98", "Store #98", CoordinateDto(52.4839, 13.4331)),
+            id = "ORD-1002",
+            orderStatusDto = OrderStatusDto.PENDING,
+            orderDateTime = Instant.parse("2026-09-04T08:20:00Z"),
+            storeDto = storeById("94")!!,
             items = listOf(
-                OrderItemDto("OI-1016", products[1], 1, ItemPickupStatusDto.PICKED, 1),
-                OrderItemDto("OI-1017", products[3], 1, ItemPickupStatusDto.PICKED, 1),
-                OrderItemDto("OI-1018", products[4], 1, ItemPickupStatusDto.PICKED, 1),
-                OrderItemDto("OI-1019", products[8], 2, ItemPickupStatusDto.PICKED, 2)
+                OrderItemDto(
+                    id = "OI-1003",
+                    orderIdDto = "ORD-1002",
+                    productDto = products[4], // Butter
+                    quantity = 1,
+                    pickupStatus = ItemPickupStatusDto.PENDING,
+                    pickedQuantity = 1,
+                    selectedSubstituteId = "6"
+                ),
+                OrderItemDto(
+                    id = "OI-1004",
+                    orderIdDto = "ORD-1002",
+                    productDto = products[6], // White Bread
+                    quantity = 2,
+                    pickupStatus = ItemPickupStatusDto.PENDING,
+                    pickedQuantity = 2
+                )
             ),
             assignedAssociate = loggedInAssociate
         ),
+
+        // ---------------------------------------------------------
+        // Order 1003 - Pasta unavailable, Gluten-Free Pasta offered
+        // ---------------------------------------------------------
         OrderDto(
-            id = "ORD-1007",
-            orderStatusDto = OrderStatusDto.PICKING,
-            orderDateTime = Instant.parse("2026-09-03T12:10:00Z"),
-            storeDto = StoreDto("99", "Store #99", CoordinateDto(52.5612, 13.3287)),
+            id = "ORD-1003",
+            orderStatusDto = OrderStatusDto.PENDING,
+            orderDateTime = Instant.parse("2026-09-04T06:30:00Z"),
+            storeDto = storeById("95")!!,
             items = listOf(
-                OrderItemDto("OI-1020", products[5], 3, ItemPickupStatusDto.PICKED, 3),
-                OrderItemDto("OI-1021", products[6], 2, ItemPickupStatusDto.PICKED, 2),
-                OrderItemDto("OI-1022", products[7], 1, ItemPickupStatusDto.PENDING),
-                OrderItemDto("OI-1023", products[9], 2, ItemPickupStatusDto.PENDING)
+                OrderItemDto(
+                    id = "OI-1005",
+                    orderIdDto = "ORD-1003",
+                    productDto = products[8], // Pasta
+                    quantity = 2,
+                    pickupStatus = ItemPickupStatusDto.PENDING,
+                    pickedQuantity = 2,
+                    selectedSubstituteId = "10",
+                    managerNotified = true,
+                    customerNotified = true
+                ),
+                OrderItemDto(
+                    id = "OI-1006",
+                    orderIdDto = "ORD-1003",
+                    productDto = products[10], // Coffee
+                    quantity = 1,
+                    pickupStatus = ItemPickupStatusDto.PENDING,
+                    pickedQuantity = 1
+                )
+            ),
+            assignedAssociate = loggedInAssociate
+        ),
+
+        // ---------------------------------------------------------
+        // Order 1004 - Decaf Coffee unavailable and no substitute
+        // ---------------------------------------------------------
+        OrderDto(
+            id = "ORD-1004",
+            orderStatusDto = OrderStatusDto.INCOMPLETE,
+            orderDateTime = Instant.parse("2026-09-04T08:55:00Z"),
+            storeDto = storeById("95")!!,
+            items = listOf(
+                OrderItemDto(
+                    id = "OI-1007",
+                    orderIdDto = "ORD-1004",
+                    productDto = products[11], // Decaf Coffee
+                    quantity = 1,
+                    pickupStatus = ItemPickupStatusDto.UNAVAILABLE,
+                    pickedQuantity = 0,
+                    managerNotified = true,
+                    customerNotified = true
+                ),
+                OrderItemDto(
+                    id = "OI-1008",
+                    orderIdDto = "ORD-1004",
+                    productDto = products[10], // Coffee
+                    quantity = 1,
+                    pickupStatus = ItemPickupStatusDto.PICKED,
+                    pickedQuantity = 1
+                )
+            ),
+            assignedAssociate = loggedInAssociate
+        ),
+
+        // ---------------------------------------------------------
+        // Order 1005 - All items available
+        // ---------------------------------------------------------
+        OrderDto(
+            id = "ORD-1005",
+            orderStatusDto = OrderStatusDto.READY,
+            orderDateTime = Instant.parse("2026-09-03T17:15:00Z"),
+            storeDto = storeById("93")!!,
+            items = listOf(
+                OrderItemDto(
+                    id = "OI-1009",
+                    orderIdDto = "ORD-1005",
+                    productDto = products[1], // Lactose-Free Milk
+                    quantity = 2,
+                    pickupStatus = ItemPickupStatusDto.PICKED,
+                    pickedQuantity = 2
+                ),
+                OrderItemDto(
+                    id = "OI-1010",
+                    orderIdDto = "ORD-1005",
+                    productDto = products[2], // Oat Milk
+                    quantity = 1,
+                    pickupStatus = ItemPickupStatusDto.PICKED,
+                    pickedQuantity = 1
+                )
+            ),
+            assignedAssociate = loggedInAssociate
+        ),
+
+        OrderDto(
+            id = "ORD-1006",
+            orderStatusDto = OrderStatusDto.PICKING,
+            orderDateTime = Instant.parse("2026-09-03T14:30:00Z"),
+            storeDto = storeById("94")!!,
+            items = listOf(
+                OrderItemDto(
+                    id = "OI-1011",
+                    orderIdDto = "ORD-1006",
+                    productDto = products[6], // White Bread
+                    quantity = 1,
+                    pickupStatus = ItemPickupStatusDto.PENDING,
+                    pickedQuantity = 1,
+                    selectedSubstituteId = "8"
+                ),
+                OrderItemDto(
+                    id = "OI-1012",
+                    orderIdDto = "ORD-1006",
+                    productDto = products[5], // Margarine
+                    quantity = 1,
+                    pickupStatus = ItemPickupStatusDto.PICKED,
+                    pickedQuantity = 1
+                )
             ),
             assignedAssociate = StoreAssociateDto("1", "emp001")
         ),
+
+        // ---------------------------------------------------------
+        // Order 1007 - Customer accepted Milk -> Oat Milk
+        // ---------------------------------------------------------
         OrderDto(
-            id = "ORD-1008",
-            orderStatusDto = OrderStatusDto.INCOMPLETE,
-            orderDateTime = Instant.parse("2026-09-02T16:40:00Z"),
-            storeDto = StoreDto("93", "Store #93", CoordinateDto(52.5208, 13.4095)),
+            id = "ORD-1007",
+            orderStatusDto = OrderStatusDto.READY,
+            orderDateTime = Instant.parse("2026-09-02T12:10:00Z"),
+            storeDto = storeById("93")!!,
             items = listOf(
-                OrderItemDto("OI-1024", products[0], 2, ItemPickupStatusDto.PICKED, 2),
                 OrderItemDto(
-                    "OI-1025",
-                    products[18],
-                    1,
-                    ItemPickupStatusDto.RESERVED_NEARBY_STORE,
-                    0,
-                    reservedStoreId = "94"
+                    id = "OI-1013",
+                    orderIdDto = "ORD-1007",
+                    productDto = products[0],
+                    quantity = 3,
+                    pickupStatus = ItemPickupStatusDto.SUBSTITUTE,
+                    pickedQuantity = 3,
+                    selectedSubstituteId = "3"
                 ),
-                OrderItemDto("OI-1026", products[19], 1, ItemPickupStatusDto.PICKED, 1)
+                OrderItemDto(
+                    id = "OI-1014",
+                    orderIdDto = "ORD-1007",
+                    productDto = products[7],
+                    quantity = 2,
+                    pickupStatus = ItemPickupStatusDto.PICKED,
+                    pickedQuantity = 2
+                )
             ),
             assignedAssociate = StoreAssociateDto("2", "emp002")
         )
     )
 
-    fun productById(id: String): ProductDto? = products.find { it.id == id }
-    fun storeById(id: String): StoreDto? = stores.find { it.id == id }
-    fun getOrderById(orderId: String) {
+    fun productById(id: String): ProductDto? =
+        products.find { it.id == id }
+
+    fun storeById(id: String): StoreDto? =
+        stores.find { it.id == id }
+
+    fun getOrderById(orderId: String): OrderDto? =
         orders.find { it.id == orderId }
-    }
 }

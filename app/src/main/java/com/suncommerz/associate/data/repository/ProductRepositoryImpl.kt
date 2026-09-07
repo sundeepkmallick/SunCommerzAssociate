@@ -19,11 +19,24 @@ class ProductRepositoryImpl @Inject constructor(private val api: FakeBackendApiR
         }
     }
 
-    override suspend fun getProduct(productId: String): Flow<Product?> {
+    override fun getProduct(productId: String): Flow<Product?> {
         return api.products.map { products ->
             products.find { product ->
                 product.id == productId
             }?.toDomain()
+        }
+    }
+
+    override fun getSubstituteProducts(productId: String): List<Product> {
+        val product = api.products.value.find {
+            it.id == productId
+        } ?: return emptyList()
+
+        return product.substituteProductIds.mapNotNull { substituteId ->
+            api.products.value
+                .find { productDto ->
+                    productDto.id == substituteId
+                }?.toDomain()
         }
     }
 

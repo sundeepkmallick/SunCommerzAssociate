@@ -1,4 +1,4 @@
-package com.suncommerz.associate.domain.usecase.order
+package com.suncommerz.associate.domain.usecase.orders
 
 import com.suncommerz.associate.domain.model.Order
 import com.suncommerz.associate.domain.repository.OrderRepository

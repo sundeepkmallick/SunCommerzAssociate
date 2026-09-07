@@ -1,7 +1,5 @@
 package com.suncommerz.associate.domain.repository
 
-import com.suncommerz.associate.data.dto.CoordinateDto
-import com.suncommerz.associate.data.dto.StoreDto
 import com.suncommerz.associate.domain.model.Coordinate
 import com.suncommerz.associate.domain.model.Store
 import kotlinx.coroutines.flow.Flow
@@ -16,5 +14,5 @@ interface StoreRepository {
     suspend fun getNearbyStores(
         locationCurrentStore: Coordinate,
         radiusMeters: Double
-    ): List<StoreDto>
+    ): List<Store?>
 }

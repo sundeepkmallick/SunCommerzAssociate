@@ -1,6 +1,5 @@
 package com.suncommerz.associate.data.repository
 
-import com.suncommerz.associate.data.dto.OrderItemDto
 import com.suncommerz.associate.data.dto.OrderStatusDto
 import com.suncommerz.associate.data.local.FakeBackendApiResponse
 import com.suncommerz.associate.data.mapper.toDomain
@@ -28,6 +27,17 @@ class OrderRepositoryImpl @Inject constructor(private val api: FakeBackendApiRes
     override fun observeOrder(orderId: String): Flow<Order?> {
         return api.orders.map { orders ->
             orders.find { it.id == orderId }?.toDomain()
+        }
+    }
+
+    override fun observeOrderItem(
+        orderItemId: String,
+        orderId: String
+    ): Flow<OrderItem?> {
+        return observeOrder(orderId).map { order ->
+            order?.items?.find {
+                it.id == orderItemId
+            }
         }
     }
 

@@ -1,5 +1,6 @@
 [versions]
 agp = "9.4.0"
+constraintlayoutComposeAndroid = "1.1.2"
 coreKtx = "1.19.0"
 hiltAndroid = "2.60.1"
 hiltLifecycleViewmodelCompose = "1.4.0"
@@ -16,6 +17,8 @@ navigationCompose = "2.10.0"
 
 [libraries]
 androidx-compose-material-icons-extended-android = { module = "androidx.compose.material:material-icons-extended-android", version.ref = "materialIconsExtendedAndroid" }
+androidx-compose-material3-window-size-class1 = { module = "androidx.compose.material3:material3-window-size-class" }
+androidx-constraintlayout-compose-android = { module = "androidx.constraintlayout:constraintlayout-compose-android", version.ref = "constraintlayoutComposeAndroid" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-hilt-lifecycle-viewmodel-compose = { module = "androidx.hilt:hilt-lifecycle-viewmodel-compose", version.ref = "hiltLifecycleViewmodelCompose" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }

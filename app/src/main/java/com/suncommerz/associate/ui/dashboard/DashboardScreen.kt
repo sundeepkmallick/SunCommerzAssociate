@@ -1,7 +1,5 @@
 package com.suncommerz.associate.ui.dashboard
 
-import android.widget.ImageButton
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -47,13 +45,15 @@ import com.suncommerz.associate.domain.model.OrderItem
 import com.suncommerz.associate.domain.model.OrderStatus
 import com.suncommerz.associate.domain.model.OrderUiModel
 import com.suncommerz.associate.domain.model.Product
+import com.suncommerz.associate.domain.model.ProductCategory
 import com.suncommerz.associate.domain.model.Store
 import com.suncommerz.associate.domain.model.StoreAssociate
 import kotlin.time.Instant
 
 @Composable
 fun DashboardScreen(
-    viewModel: DashboardViewModel = hiltViewModel()
+    viewModel: DashboardViewModel = hiltViewModel(),
+    onOrderListItemSelected: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val selectedOrderStatus by viewModel.selectedOrderStatus.collectAsStateWithLifecycle()
@@ -65,7 +65,7 @@ fun DashboardScreen(
                 viewModel.onStatusFilterChanged(status)
             }
         )
-        OrderList(uiState)
+        OrderList(uiState, onOrderListItemSelected)
     }
 
 }
@@ -80,8 +80,8 @@ fun OrderStatusFilterBar(
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(dimensionResource(R.dimen.padding_small)),
-        horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.padding_small))
+            .padding(dimensionResource(R.dimen.padding)),
+        horizontalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.padding))
     ) {
         items(filters) { status ->
             FilterChip(
@@ -96,7 +96,10 @@ fun OrderStatusFilterBar(
 }
 
 @Composable
-fun OrderList(uiState: DashboardUiState) {
+fun OrderList(
+    uiState: DashboardUiState,
+    onOrderListItemSelected: (String) -> Unit
+) {
 
     Surface(modifier = Modifier.fillMaxSize()) {
         when(uiState) {
@@ -137,13 +140,15 @@ fun OrderList(uiState: DashboardUiState) {
                     modifier = Modifier.fillMaxSize()
                 ) {
                     LazyColumn(
-                        modifier = Modifier.padding(dimensionResource(R.dimen.padding_small)),
-                        verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.padding_small))
+                        modifier = Modifier.padding(dimensionResource(R.dimen.padding)),
+                        verticalArrangement = Arrangement.spacedBy(dimensionResource(R.dimen.padding))
                     ) {
                         items( uiState.orderList) { order ->
                             OrderListItem(
                                 orderUiModel = order,
-                                onCardClick = {}
+                                onCardClick = {
+                                    onOrderListItemSelected(order.order.id)
+                                }
                             )
                         }
                     }
@@ -186,7 +191,7 @@ fun OrderListItem(orderUiModel: OrderUiModel, onCardClick: () -> Unit) {
             Column(
                 modifier = Modifier
                     .wrapContentSize()
-                    .padding(dimensionResource(R.dimen.padding_small))
+                    .padding(dimensionResource(R.dimen.padding))
                     .weight(0.5f),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -232,13 +237,13 @@ private fun getOrderStatusColor(orderStatus: OrderStatus): Color {
 @Preview
 @Composable
 fun DashboardScreenLoading() {
-    OrderList(uiState = DashboardUiState.Loading)
+    OrderList(uiState = DashboardUiState.Loading, {})
 }
 
 @Preview
 @Composable
 fun DashboardScreenError() {
-    OrderList(uiState = DashboardUiState.Error(message = "Some error occurred!"))
+    OrderList(uiState = DashboardUiState.Error(message = "Some error occurred!"), {})
 }
 
 @Preview
@@ -255,15 +260,36 @@ fun OrderListPreviewLoaded() {
                         orderDateTime = Instant.parse("2026-09-04T07:45:00Z"),
                         store = Store("93", "Store #93", Coordinate(52.5208, 13.4095)),
                         items = listOf(
-                            OrderItem("OI-1001", Product("1", "Prod-1", 1.99, "EUR", "product description 1"), 2, ItemPickupStatus.PICKED, 2),
-                            OrderItem("OI-1002", Product("2", "Prod-2", 0.99, "EUR", "product description 2"), 1, ItemPickupStatus.PICKED, 1),
-                            OrderItem("OI-1003", Product("3", "Prod-3", 11.50, "EUR", "product description 3"), 1, ItemPickupStatus.PICKED, 1)
+                            OrderItem(
+                                id = "OI-1001",
+                                orderId = "ORD-1001",
+                                product = Product(
+                                    id = "1",
+                                    name = "Whole Milk",
+                                    price = 1.19,
+                                    currency = "EUR",
+                                    description = "Fresh whole milk, 1 liter",
+                                    category = ProductCategory.DAIRY,
+                                    ingredients = listOf("Milk"),
+                                    attributes = mapOf(
+                                        "volume" to "1L",
+                                        "fat" to "3.5%",
+                                        "type" to "whole-milk"
+                                    ),
+                                    substituteProductIds = listOf("2", "3", "4")
+                                ),
+                                requestedQuantity = 2,
+                                pickupStatus = ItemPickupStatus.SUBSTITUTE,
+                                pickedQuantity = 2,
+                                selectedSubstituteId = "3"
+                            )
                         ),
-                        assignedAssociate = StoreAssociate("1", "user1")
+                        assignedAssociate = StoreAssociate("7", "emp007")
                     ),
                     orderDateTimeFormatted = "04 Sep 2026, 14:56"
                 )
             )
-        )
+        ),
+        onOrderListItemSelected = {}
     )
 }

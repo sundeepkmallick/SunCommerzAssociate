@@ -31,10 +31,12 @@ class StoreRepositoryImpl @Inject constructor(val apiResponse: FakeBackendApiRes
     override suspend fun getNearbyStores(
         locationCurrentStore: Coordinate,
         radiusMeters: Double
-    ): List<StoreDto> {
-        return apiResponse.stores.value.filter { store ->
-            calculateDistance(locationCurrentStore, store.toDomain().location) <= radiusMeters
+    ): List<Store> {
+        val storesDto: List<StoreDto> = apiResponse.stores.value.filter { storeDtos ->
+            calculateDistance(locationCurrentStore,  storeDtos.toDomain().location) <= radiusMeters
         }
+
+        return storesDto.map { it.toDomain() }
     }
 
     fun calculateDistance(

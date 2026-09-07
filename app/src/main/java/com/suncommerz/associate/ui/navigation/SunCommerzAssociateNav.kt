@@ -1,15 +1,22 @@
 package com.suncommerz.associate.ui.navigation
 
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.suncommerz.associate.ui.common.UiContentType
 import com.suncommerz.associate.ui.dashboard.DashboardScreen
+import com.suncommerz.associate.ui.order.OrderDetailsScreen
+import com.suncommerz.associate.ui.orderitem.OrderItemDetailsScreen
 
 @Composable
-fun SunCommerzAssociateNav(navController: NavHostController, modifier: Modifier) {
+fun SunCommerzAssociateNav(
+    navController: NavHostController,
+    modifier: Modifier,
+    contentType: UiContentType
+) {
 
         NavHost(
             navController = navController,
@@ -17,12 +24,32 @@ fun SunCommerzAssociateNav(navController: NavHostController, modifier: Modifier)
             modifier = modifier
         ) {
             composable(SunCommerzAssociateScreen.Start.name) {
-                DashboardScreen()
+                DashboardScreen(
+                    onOrderListItemSelected = {
+                        navController.navigate("${SunCommerzAssociateScreen.Order.name}/${it}")
+                    }
+                )
+            }
+
+            composable("${SunCommerzAssociateScreen.Order.name}/{orderId}") { entry ->
+                OrderDetailsScreen(
+                    hiltViewModel(),
+                    contentType,
+                    onBackPressed = { navController.popBackStack() },
+                    onOrderItemClick = { selectedOrderId, orderItemId ->
+                        navController.navigate(
+                            "${SunCommerzAssociateScreen.OrderItem.name}/${selectedOrderId}/${orderItemId}"
+                        )
+                    }
+                )
+            }
+
+            composable("${SunCommerzAssociateScreen.OrderItem.name}/{orderItemId}/{orderId}") {
+                OrderItemDetailsScreen(
+                    hiltViewModel(),
+                    onBackPressed = { navController.popBackStack() }
+                )
             }
         }
-
-
-
-
 }
 

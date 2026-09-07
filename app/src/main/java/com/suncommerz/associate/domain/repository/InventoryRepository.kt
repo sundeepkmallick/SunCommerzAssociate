@@ -18,4 +18,6 @@ interface InventoryRepository {
         productId: String,
         quantity: Int
     )
+
+    fun getAvailableQuantity(productId: String, storeId: String): Int
 }

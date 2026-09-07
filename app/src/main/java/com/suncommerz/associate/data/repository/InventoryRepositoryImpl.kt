@@ -10,7 +10,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class InventoryRepositoryImpl @Inject constructor(val api: FakeBackendApiResponse): InventoryRepository {
+class InventoryRepositoryImpl @Inject constructor(val api: FakeBackendApiResponse) :
+    InventoryRepository {
 
     override fun observeInventory(storeId: String): Flow<List<InventoryRecord>> {
         return api.inventoryRecords.map { inventoryRecordDtos ->
@@ -39,7 +40,7 @@ class InventoryRepositoryImpl @Inject constructor(val api: FakeBackendApiRespons
         quantity: Int
     ) {
         val inventoryUpdate = api.inventoryRecords.value.map {
-            if (it.storeId == storeId && it.productId == productId){
+            if (it.storeId == storeId && it.productId == productId) {
                 it.copy(
                     stockQuantity = quantity
                 )
@@ -49,6 +50,12 @@ class InventoryRepositoryImpl @Inject constructor(val api: FakeBackendApiRespons
         }
 
         api.updateInventory(inventoryUpdate)
+    }
+
+    override fun getAvailableQuantity(productId: String, storeId: String): Int {
+        return api.inventoryRecords.value.find {
+            it.storeId == storeId && it.productId == productId
+        }?.stockQuantity ?: 0
     }
 
 }

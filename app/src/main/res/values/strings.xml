@@ -8,4 +8,5 @@
     <string name="order_items_label">%s items</string>
     <string name="right_arrow">Rigth Arrow</string>
     <string name="filter_none">All</string>
+    <string name="button_pick_using_ai">PICK USING AI</string>
 </resources>
