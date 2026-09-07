@@ -15,7 +15,6 @@ fun ProductDto.toDomain(): Product {
         category = categoryDto.toDomain(),
         ingredients = ingredients,
         attributes = attributes,
-        substituteProductIds = substituteProductIds
     )
 }
 
@@ -29,7 +28,6 @@ fun Product.toDto(): ProductDto {
         categoryDto = category.toDto(),
         ingredients = ingredients,
         attributes = attributes,
-        substituteProductIds = substituteProductIds
     )
 }
 

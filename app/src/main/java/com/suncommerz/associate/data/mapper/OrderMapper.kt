@@ -3,10 +3,12 @@ package com.suncommerz.associate.data.mapper
 import com.suncommerz.associate.data.dto.ItemPickupStatusDto
 import com.suncommerz.associate.data.dto.OrderDto
 import com.suncommerz.associate.data.dto.OrderItemDto
+import com.suncommerz.associate.data.dto.SubstitutionHistoryDto
 import com.suncommerz.associate.domain.model.ItemPickupStatus
 import com.suncommerz.associate.domain.model.Order
 import com.suncommerz.associate.domain.model.OrderItem
 import com.suncommerz.associate.domain.model.OrderStatus
+import com.suncommerz.associate.domain.model.SubstitutionHistory
 
 fun OrderDto.toDomain(): Order {
     return Order(
@@ -46,5 +48,15 @@ fun OrderItem.toDto(): OrderItemDto {
         reservedStoreId = reservedStoreId,
         managerNotified = managerNotified,
         customerNotified = customerNotified
+    )
+}
+
+fun SubstitutionHistoryDto.toDomain(): SubstitutionHistory {
+    return SubstitutionHistory(
+        customerId = customerId,
+        originalProductId = originalProductId,
+        substituteProductId = substituteProductId,
+        accepted = accepted,
+        orderDateTime = orderDateTime
     )
 }

@@ -5,6 +5,7 @@ import com.suncommerz.associate.data.dto.OrderDto
 import com.suncommerz.associate.data.dto.ProductDto
 import com.suncommerz.associate.data.dto.StoreAssociateDto
 import com.suncommerz.associate.data.dto.StoreDto
+import com.suncommerz.associate.data.dto.SubstitutionHistoryDto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,6 +25,9 @@ class FakeBackendApiResponse @Inject constructor() {
 
     private val _orders = MutableStateFlow(FakeBackendData.orders)
     val orders: StateFlow<List<OrderDto>> = _orders.asStateFlow()
+
+    private val _substitutionHistory = MutableStateFlow(FakeBackendData.substitutionHistory)
+    val substitutionHistory: StateFlow<List<SubstitutionHistoryDto>> = _substitutionHistory.asStateFlow()
 
     private val _loggedInAssociates = MutableStateFlow(FakeBackendData.loggedInAssociate)
     val loggedInAssociates: StateFlow<StoreAssociateDto> = _loggedInAssociates.asStateFlow()

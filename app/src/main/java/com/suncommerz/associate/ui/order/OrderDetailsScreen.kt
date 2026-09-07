@@ -33,7 +33,7 @@ fun OrderDetailsScreen(
         uiState,
         contentType,
         onOrderItemSelected = { orderId, orderItemId ->
-            viewModel.onOrderItemSelected(orderId, orderItemId)
+            onOrderItemClick(orderId, orderItemId)
         },
         {onBackPressed()}
     )

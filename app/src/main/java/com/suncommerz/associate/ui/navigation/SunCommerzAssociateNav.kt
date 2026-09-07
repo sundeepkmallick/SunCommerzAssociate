@@ -44,7 +44,7 @@ fun SunCommerzAssociateNav(
                 )
             }
 
-            composable("${SunCommerzAssociateScreen.OrderItem.name}/{orderItemId}/{orderId}") {
+            composable("${SunCommerzAssociateScreen.OrderItem.name}/{orderId}/{orderItemId}") {
                 OrderItemDetailsScreen(
                     hiltViewModel(),
                     onBackPressed = { navController.popBackStack() }

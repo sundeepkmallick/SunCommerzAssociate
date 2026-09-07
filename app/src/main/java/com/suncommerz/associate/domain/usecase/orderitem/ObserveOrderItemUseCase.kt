@@ -8,7 +8,7 @@ import javax.inject.Inject
 class ObserveOrderItemUseCase @Inject constructor(
     private val orderRepository: OrderRepository
 ) {
-    fun observeOrderItem(orderItemId: String, orderId: String): Flow<OrderItem?> {
-        return orderRepository.observeOrderItem(orderItemId = orderItemId, orderId = orderId)
+    fun observeOrderItem(orderId: String, orderItemId: String): Flow<OrderItem?> {
+        return orderRepository.observeOrderItem(orderId = orderId, orderItemId = orderItemId)
     }
 }

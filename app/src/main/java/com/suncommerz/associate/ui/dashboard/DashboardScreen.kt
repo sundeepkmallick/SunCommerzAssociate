@@ -215,7 +215,7 @@ fun OrderListItem(orderUiModel: OrderUiModel, onCardClick: () -> Unit) {
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Default.ArrowRight,
-                    contentDescription = stringResource(R.string.right_arrow)
+                    contentDescription = stringResource(R.string.content_description_icon_right_arrow)
                 )
             }
 
@@ -276,7 +276,6 @@ fun OrderListPreviewLoaded() {
                                         "fat" to "3.5%",
                                         "type" to "whole-milk"
                                     ),
-                                    substituteProductIds = listOf("2", "3", "4")
                                 ),
                                 requestedQuantity = 2,
                                 pickupStatus = ItemPickupStatus.SUBSTITUTE,

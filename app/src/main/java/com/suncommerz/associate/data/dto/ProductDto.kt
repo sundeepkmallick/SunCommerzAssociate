@@ -10,7 +10,7 @@ data class ProductDto(
     val categoryDto: ProductCategoryDto,
     val ingredients: List<String> = emptyList(),
     val attributes: Map<String, String> = emptyMap(),
-    val substituteProductIds: List<String> = emptyList()
+    //val substituteProductIds: List<String> = emptyList()
 )
 
 enum class ProductCategoryDto {

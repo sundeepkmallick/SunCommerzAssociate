@@ -44,7 +44,7 @@ object FakeBackendData {
                 "fat" to "3.5%",
                 "type" to "whole-milk"
             ),
-            substituteProductIds = listOf("2", "3", "4")
+            //substituteProductIds = listOf("2", "3", "4")
         ),
 
         // 2 - Substitute for Whole Milk
@@ -61,7 +61,7 @@ object FakeBackendData {
                 "fat" to "3.5%",
                 "type" to "lactose-free-milk"
             ),
-            substituteProductIds = listOf("1", "3", "4")
+            //substituteProductIds = listOf("1", "3", "4")
         ),
 
         // 3 - Substitute for Whole Milk
@@ -83,7 +83,7 @@ object FakeBackendData {
                 "type" to "plant-based-milk",
                 "diet" to "vegan"
             ),
-            substituteProductIds = listOf("1", "2", "4")
+            //substituteProductIds = listOf("1", "2", "4")
         ),
 
         // 4 - Substitute for Whole Milk
@@ -105,7 +105,7 @@ object FakeBackendData {
                 "type" to "plant-based-milk",
                 "diet" to "vegan"
             ),
-            substituteProductIds = listOf("1", "2", "3")
+            //substituteProductIds = listOf("1", "2", "3")
         ),
 
         // 5 - Original product with substitute
@@ -122,7 +122,7 @@ object FakeBackendData {
                 "type" to "butter",
                 "salted" to "true"
             ),
-            substituteProductIds = listOf("6")
+            //substituteProductIds = listOf("6")
         ),
 
         // 6 - Substitute for Butter
@@ -142,7 +142,7 @@ object FakeBackendData {
                 "weight" to "250g",
                 "type" to "butter-alternative"
             ),
-            substituteProductIds = listOf("5")
+            //substituteProductIds = listOf("5")
         ),
 
         // 7 - Product that can be unavailable in one store
@@ -159,7 +159,7 @@ object FakeBackendData {
                 "type" to "ground-coffee",
                 "caffeine" to "regular"
             ),
-            substituteProductIds = listOf("8")
+            //substituteProductIds = listOf("8")
         ),
 
         // 8 - Coffee substitute
@@ -178,7 +178,7 @@ object FakeBackendData {
                 "type" to "ground-coffee",
                 "caffeine" to "decaf"
             ),
-            substituteProductIds = listOf("7")
+            //substituteProductIds = listOf("7")
         ),
 
         // 9 - Original product that may need nearby-store search
@@ -197,7 +197,7 @@ object FakeBackendData {
                 "weight" to "500g",
                 "type" to "regular-pasta"
             ),
-            substituteProductIds = listOf("10")
+            //substituteProductIds = listOf("10")
         ),
 
         // 10 - Pasta substitute
@@ -217,7 +217,7 @@ object FakeBackendData {
                 "weight" to "500g",
                 "type" to "gluten-free-pasta"
             ),
-            substituteProductIds = listOf("9")
+            //substituteProductIds = listOf("9")
         ),
 
         // 11 - Product intentionally unavailable at assigned store
@@ -234,7 +234,7 @@ object FakeBackendData {
                 "weight" to "250g",
                 "type" to "fresh-fish"
             ),
-            substituteProductIds = emptyList()
+            //substituteProductIds = emptyList()
         ),
 
         // 12 - Product intentionally unavailable at assigned store
@@ -251,7 +251,7 @@ object FakeBackendData {
                 "weight" to "500g",
                 "type" to "fresh-chicken"
             ),
-            substituteProductIds = emptyList()
+            //substituteProductIds = emptyList()
         )
     )
 
@@ -275,6 +275,7 @@ object FakeBackendData {
 
         InventoryRecordDto("7", "94", 0),   // Coffee unavailable
         InventoryRecordDto("8", "94", 6),   // Decaf Coffee available
+        InventoryRecordDto("9", "94", 12),  // Pasta available nearby
 
         // ---------------------------------------------------------
         // Store #95 - ASSIGNED STORE
@@ -309,6 +310,7 @@ object FakeBackendData {
 
         InventoryRecordDto("11", "97", 0),   // Salmon unavailable
         InventoryRecordDto("12", "97", 8),   // Chicken available nearby
+        InventoryRecordDto("9", "97", 18),  // Pasta available nearby
 
         // ---------------------------------------------------------
         // Store #98
@@ -395,7 +397,7 @@ object FakeBackendData {
             id = "ORD-1001",
             orderStatusDto = OrderStatusDto.READY,
             orderDateTime = Instant.parse("2026-09-04T07:45:00Z"),
-            storeDto = storeById("93")!!,
+            storeDto = storeById(assignedStore!!.id)!!,
             items = listOf(
                 OrderItemDto(
                     id = "OI-1001",
@@ -425,7 +427,7 @@ object FakeBackendData {
             id = "ORD-1002",
             orderStatusDto = OrderStatusDto.PENDING,
             orderDateTime = Instant.parse("2026-09-04T08:20:00Z"),
-            storeDto = storeById("94")!!,
+            storeDto = storeById(assignedStore.id)!!,
             items = listOf(
                 OrderItemDto(
                     id = "OI-1003",
@@ -455,7 +457,7 @@ object FakeBackendData {
             id = "ORD-1003",
             orderStatusDto = OrderStatusDto.PENDING,
             orderDateTime = Instant.parse("2026-09-04T06:30:00Z"),
-            storeDto = storeById("95")!!,
+            storeDto = storeById(assignedStore.id)!!,
             items = listOf(
                 OrderItemDto(
                     id = "OI-1005",
@@ -487,7 +489,7 @@ object FakeBackendData {
             id = "ORD-1004",
             orderStatusDto = OrderStatusDto.INCOMPLETE,
             orderDateTime = Instant.parse("2026-09-04T08:55:00Z"),
-            storeDto = storeById("95")!!,
+            storeDto = storeById(assignedStore.id)!!,
             items = listOf(
                 OrderItemDto(
                     id = "OI-1007",
@@ -518,7 +520,7 @@ object FakeBackendData {
             id = "ORD-1005",
             orderStatusDto = OrderStatusDto.READY,
             orderDateTime = Instant.parse("2026-09-03T17:15:00Z"),
-            storeDto = storeById("93")!!,
+            storeDto = storeById(assignedStore.id)!!,
             items = listOf(
                 OrderItemDto(
                     id = "OI-1009",
@@ -544,7 +546,7 @@ object FakeBackendData {
             id = "ORD-1006",
             orderStatusDto = OrderStatusDto.PICKING,
             orderDateTime = Instant.parse("2026-09-03T14:30:00Z"),
-            storeDto = storeById("94")!!,
+            storeDto = storeById(assignedStore.id)!!,
             items = listOf(
                 OrderItemDto(
                     id = "OI-1011",
@@ -574,7 +576,7 @@ object FakeBackendData {
             id = "ORD-1007",
             orderStatusDto = OrderStatusDto.READY,
             orderDateTime = Instant.parse("2026-09-02T12:10:00Z"),
-            storeDto = storeById("93")!!,
+            storeDto = storeById(assignedStore.id)!!,
             items = listOf(
                 OrderItemDto(
                     id = "OI-1013",

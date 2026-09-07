@@ -3,11 +3,9 @@ package com.suncommerz.associate.ui.order
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -190,7 +188,7 @@ fun ShowListItemOrderItem(orderItem: OrderItem, onOrderItemSelected: () -> Unit)
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Default.ArrowRight,
-                    contentDescription = stringResource(R.string.right_arrow)
+                    contentDescription = stringResource(R.string.content_description_icon_right_arrow)
                 )
             }
         }
@@ -225,7 +223,6 @@ fun OrderDetailsCompactContentPreview() {
                                 "fat" to "3.5%",
                                 "type" to "whole-milk"
                             ),
-                            substituteProductIds = listOf("2", "3", "4")
                         ),
                         requestedQuantity = 2,
                         pickupStatus = ItemPickupStatus.SUBSTITUTE,

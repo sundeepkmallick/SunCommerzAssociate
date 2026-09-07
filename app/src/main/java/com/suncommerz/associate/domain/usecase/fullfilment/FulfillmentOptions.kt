@@ -11,10 +11,8 @@ import com.suncommerz.associate.domain.model.Store
  *
  * 1. Substitute available in current store
  * 2. Original product available in nearby store
- * 3. Substitute available in nearby store
  */
 data class FulfillmentOptions(
-    val substitutesInCurrentStore: List<Product>,
-    val originalProductNearbyStores: List<Store>,
-    val substitutesInNearbyStores: Map<Product, List<Store>>
+    val substitutesInCurrentStore: List<Product>?,
+    val originalProductNearbyStores: List<Store>?,
 )

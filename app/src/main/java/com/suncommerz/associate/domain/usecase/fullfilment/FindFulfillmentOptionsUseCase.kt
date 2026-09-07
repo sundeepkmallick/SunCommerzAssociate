@@ -2,9 +2,14 @@ package com.suncommerz.associate.domain.usecase.fullfilment
 
 import com.suncommerz.associate.domain.model.Product
 import com.suncommerz.associate.domain.model.Store
+import com.suncommerz.associate.domain.repository.InventoryRepository
+import com.suncommerz.associate.domain.usecase.inventory.GetProductAvailabilityUseCase
 import com.suncommerz.associate.domain.usecase.inventory.IsProductAvailableUseCase
 import com.suncommerz.associate.domain.usecase.product.GetSubstituteProductsUseCase
 import com.suncommerz.associate.domain.usecase.store.FindNearbyStoresWithProductUseCase
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class FindFulfillmentOptionsUseCase @Inject constructor(
@@ -28,49 +33,27 @@ class FindFulfillmentOptionsUseCase @Inject constructor(
             "Radius cannot be negative"
         }
 
-        val substituteProducts =
-            getSubstituteProductsUseCase(
-                productId = product.id
-            )
-
         val availableSubstitutesInCurrentStore =
-            substituteProducts.filter { substitute ->
+            getSubstituteProductsUseCase(productId = product.id).map { substituteList ->
+                substituteList?.filterNotNull()?.filter { substituteProduct ->
+                    isProductAvailableUseCase(
+                        productId = substituteProduct.id,
+                        storeId = currentStore.id,
+                        quantity = quantity
+                    )
+                }
+            }.first()
 
-                isProductAvailableUseCase(
-                    productId = substitute.id,
-                    storeId = currentStore.id,
-                    quantity = quantity
-                )
-            }
-
-        val nearbyStoresWithOriginalProduct =
-            findNearbyStoresWithProductUseCase(
-                productId = product.id,
-                currentStore = currentStore,
-                quantity = quantity,
-                radiusMeters = radiusMeters
-            )
-
-        val nearbyStoresWithSubstitutes =
-            substituteProducts.associateWith { substitute ->
-
-                findNearbyStoresWithProductUseCase(
-                    productId = substitute.id,
-                    currentStore = currentStore,
-                    quantity = quantity,
-                    radiusMeters = radiusMeters
-                )
-            }
+        val nearbyStoresWithOriginalProduct = findNearbyStoresWithProductUseCase(
+            productId = product.id,
+            currentStore = currentStore,
+            quantity = quantity,
+            radiusMeters = radiusMeters
+        )
 
         return FulfillmentOptions(
-            substitutesInCurrentStore =
-                availableSubstitutesInCurrentStore,
-
-            originalProductNearbyStores =
-                nearbyStoresWithOriginalProduct,
-
-            substitutesInNearbyStores =
-                nearbyStoresWithSubstitutes
+            substitutesInCurrentStore = availableSubstitutesInCurrentStore,
+            originalProductNearbyStores = nearbyStoresWithOriginalProduct,
         )
     }
 }

@@ -9,5 +9,5 @@ data class Product(
     val category: ProductCategory,
     val ingredients: List<String> = emptyList(),
     val attributes: Map<String, String> = emptyMap(),
-    val substituteProductIds: List<String> = emptyList()
+    //val substituteProductIds: List<String> = emptyList()
 )

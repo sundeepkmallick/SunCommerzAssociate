@@ -7,6 +7,7 @@ import com.suncommerz.associate.data.mapper.toDto
 import com.suncommerz.associate.domain.model.Order
 import com.suncommerz.associate.domain.model.OrderItem
 import com.suncommerz.associate.domain.model.OrderStatus
+import com.suncommerz.associate.domain.model.SubstitutionHistory
 import com.suncommerz.associate.domain.repository.OrderRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -31,13 +32,23 @@ class OrderRepositoryImpl @Inject constructor(private val api: FakeBackendApiRes
     }
 
     override fun observeOrderItem(
+        orderId: String,
         orderItemId: String,
-        orderId: String
     ): Flow<OrderItem?> {
         return observeOrder(orderId).map { order ->
             order?.items?.find {
                 it.id == orderItemId
             }
+        }
+    }
+
+    override fun pastOrderWithSubstitutionHistory(productId: String): Flow<List<SubstitutionHistory>> {
+        return api.substitutionHistory.map { substitutionHistoryDtos ->
+                substitutionHistoryDtos.filter {
+                    it.originalProductId == productId
+                }.map {
+                    it.toDomain()
+                }
         }
     }
 
