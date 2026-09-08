@@ -28,6 +28,7 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import com.suncommerz.associate.R
 import com.suncommerz.associate.domain.model.Coordinate
@@ -46,17 +47,24 @@ import kotlin.time.Instant
 fun OrderDetailsCompact(
     uiState: OrderDetailsUiState.Loaded,
     onBackPressed: () -> Unit,
-    onOrderItemSelected: (String, String) -> Unit
+    onOrderItemSelected: (String, String) -> Unit,
+    updateOrderStatus: () -> Unit
 ) {
     val orderUiModel = uiState.orderUiModel
+    val isUpdateOrderStatusInProgress = uiState.isUpdateOrderStatusInProgress
 
-    OrderDetailsCompactContent(orderUiModel, onOrderItemSelected)
+    OrderDetailsCompactContent(orderUiModel, onOrderItemSelected, updateOrderStatus, isUpdateOrderStatusInProgress)
 
 
 }
 
 @Composable
-fun OrderDetailsCompactContent(orderUiModel: OrderUiModel, onOrderItemSelected: (String, String) -> Unit) {
+fun OrderDetailsCompactContent(
+    orderUiModel: OrderUiModel,
+    onOrderItemSelected: (String, String) -> Unit,
+    updateOrderStatus: () -> Unit,
+    isUpdateOrderStatusInProgress: Boolean
+) {
     Surface {
         ConstraintLayout(
             modifier = Modifier.fillMaxSize().padding(dimensionResource(R.dimen.padding))
@@ -127,12 +135,24 @@ fun OrderDetailsCompactContent(orderUiModel: OrderUiModel, onOrderItemSelected: 
                 }
 
                 Button(
-                    modifier = Modifier.fillMaxWidth().padding(dimensionResource(R.dimen.padding)),
+                    modifier = Modifier.fillMaxWidth().padding(dimensionResource(R.dimen.padding_small)),
                     onClick = {
                         //TODO
                     }
                 ) {
                     Text(text = stringResource(R.string.button_pick_using_ai))
+                }
+
+                Button(
+                    modifier = Modifier.fillMaxWidth().padding(dimensionResource(R.dimen.padding_small)),
+                    onClick = {
+                        if(!isUpdateOrderStatusInProgress){
+                            updateOrderStatus()
+                        }
+                    },
+                    enabled = !isUpdateOrderStatusInProgress
+                ) {
+                    Text(text = stringResource(R.string.button_update_order))
                 }
             }
 
@@ -162,8 +182,8 @@ fun ShowListItemOrderItem(orderItem: OrderItem, onOrderItemSelected: () -> Unit)
                     start.linkTo(parent.start)
                     bottom.linkTo(parent.bottom)
                 }.wrapContentSize().padding(dimensionResource(R.dimen.padding_small)),
-                text = orderItem.pickupStatus.name,
-                style = MaterialTheme.typography.bodySmall
+                text = getPickUpStausString(orderItem.pickupStatus),
+                fontSize = 10.sp,
             )
 
             Text(
@@ -192,6 +212,17 @@ fun ShowListItemOrderItem(orderItem: OrderItem, onOrderItemSelected: () -> Unit)
                 )
             }
         }
+    }
+}
+
+@Composable
+fun getPickUpStausString(pickupStatus: ItemPickupStatus): String{
+    return when(pickupStatus) {
+        ItemPickupStatus.PICKED -> stringResource(R.string.item_pick_up_status_picked)
+        ItemPickupStatus.PENDING -> stringResource(R.string.item_pick_up_status_pending)
+        ItemPickupStatus.SUBSTITUTE -> stringResource(R.string.item_pick_up_status_substituted)
+        ItemPickupStatus.RESERVED_NEARBY_STORE -> stringResource(R.string.item_pick_up_status_reserved)
+        ItemPickupStatus.UNAVAILABLE -> stringResource(R.string.item_pick_up_status_unavailable)
     }
 }
 
@@ -234,7 +265,9 @@ fun OrderDetailsCompactContentPreview() {
             ),
             orderDateTimeFormatted = "09 September, 2026 9:00"
         ),
-        onOrderItemSelected = { _, _ -> }
+        onOrderItemSelected = { _, _ -> },
+        updateOrderStatus = {},
+        isUpdateOrderStatusInProgress = false
     )
 }
 

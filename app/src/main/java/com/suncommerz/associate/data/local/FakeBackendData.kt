@@ -1,8 +1,10 @@
 package com.suncommerz.associate.data.local
 
+import com.suncommerz.associate.data.dto.AssociateNotificationDto
 import com.suncommerz.associate.data.dto.CoordinateDto
 import com.suncommerz.associate.data.dto.InventoryRecordDto
 import com.suncommerz.associate.data.dto.ItemPickupStatusDto
+import com.suncommerz.associate.data.dto.NotificationReasonTypeDto
 import com.suncommerz.associate.data.dto.OrderDto
 import com.suncommerz.associate.data.dto.OrderItemDto
 import com.suncommerz.associate.data.dto.OrderStatusDto
@@ -10,6 +12,7 @@ import com.suncommerz.associate.data.dto.ProductCategoryDto
 import com.suncommerz.associate.data.dto.ProductDto
 import com.suncommerz.associate.data.dto.StoreDto
 import com.suncommerz.associate.data.dto.StoreAssociateDto
+import com.suncommerz.associate.data.dto.StoreManagerDto
 import com.suncommerz.associate.data.dto.SubstitutionHistoryDto
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
@@ -28,6 +31,25 @@ object FakeBackendData {
 
     val assignedStore = storeById("95")
     val loggedInAssociate = StoreAssociateDto("7", "emp007")
+
+    val storeManager = StoreManagerDto("3", "manager003", assignedStore?.id ?: "95",
+        listOf(
+            StoreAssociateDto("7", "emp007"),
+            StoreAssociateDto("1", "emp001"),
+            StoreAssociateDto("2", "emp002")
+        )
+    )
+
+    val notifications = listOf(
+        AssociateNotificationDto(
+            NotificationReasonTypeDto.INVENTORY_ISSUE_OUT_OF_STOCK,
+            "ORD-990",
+            "OI-102",
+            "1",
+            "3",
+            Instant.parse("2026-07-18T11:10:00Z")
+            )
+    )
 
     val products = listOf(
         // 1 - Original product has substitutes
@@ -284,7 +306,7 @@ object FakeBackendData {
         // Substitution scenario
         InventoryRecordDto("1", "95", 0),   // Milk unavailable
         InventoryRecordDto("2", "95", 2),   // Lactose-Free Milk available
-        InventoryRecordDto("3", "95", 7),   // Oat Milk available
+        InventoryRecordDto("3", "95", 1),   // Oat Milk available - Low Stock
         InventoryRecordDto("4", "95", 4),   // Soy Milk available
 
         // Nearby-store scenario
@@ -326,6 +348,7 @@ object FakeBackendData {
         InventoryRecordDto("5", "99", 8),   // Butter
         InventoryRecordDto("6", "99", 5)    // Margarine
     )
+
 
 
     /**
@@ -395,7 +418,7 @@ object FakeBackendData {
         // ---------------------------------------------------------
         OrderDto(
             id = "ORD-1001",
-            orderStatusDto = OrderStatusDto.READY,
+            orderStatusDto = OrderStatusDto.PENDING,
             orderDateTime = Instant.parse("2026-09-04T07:45:00Z"),
             storeDto = storeById(assignedStore!!.id)!!,
             items = listOf(
@@ -404,17 +427,17 @@ object FakeBackendData {
                     orderIdDto = "ORD-1001",
                     productDto = products[0], // Milk
                     quantity = 2,
-                    pickupStatus = ItemPickupStatusDto.SUBSTITUTE,
-                    pickedQuantity = 2,
-                    selectedSubstituteId = "3"
+                    pickupStatus = ItemPickupStatusDto.PENDING,
+                    pickedQuantity = 0,//2
+                    selectedSubstituteId = null //"3"
                 ),
                 OrderItemDto(
                     id = "OI-1002",
                     orderIdDto = "ORD-1001",
                     productDto = products[7], // Whole Grain Bread
                     quantity = 1,
-                    pickupStatus = ItemPickupStatusDto.PICKED,
-                    pickedQuantity = 1
+                    pickupStatus = ItemPickupStatusDto.PENDING,
+                    pickedQuantity = 0
                 )
             ),
             assignedAssociate = loggedInAssociate
@@ -487,7 +510,7 @@ object FakeBackendData {
         // ---------------------------------------------------------
         OrderDto(
             id = "ORD-1004",
-            orderStatusDto = OrderStatusDto.INCOMPLETE,
+            orderStatusDto = OrderStatusDto.PENDING,
             orderDateTime = Instant.parse("2026-09-04T08:55:00Z"),
             storeDto = storeById(assignedStore.id)!!,
             items = listOf(
@@ -496,7 +519,7 @@ object FakeBackendData {
                     orderIdDto = "ORD-1004",
                     productDto = products[11], // Decaf Coffee
                     quantity = 1,
-                    pickupStatus = ItemPickupStatusDto.UNAVAILABLE,
+                    pickupStatus = ItemPickupStatusDto.PENDING,
                     pickedQuantity = 0,
                     managerNotified = true,
                     customerNotified = true
@@ -506,7 +529,7 @@ object FakeBackendData {
                     orderIdDto = "ORD-1004",
                     productDto = products[10], // Coffee
                     quantity = 1,
-                    pickupStatus = ItemPickupStatusDto.PICKED,
+                    pickupStatus = ItemPickupStatusDto.PENDING,
                     pickedQuantity = 1
                 )
             ),
@@ -518,7 +541,7 @@ object FakeBackendData {
         // ---------------------------------------------------------
         OrderDto(
             id = "ORD-1005",
-            orderStatusDto = OrderStatusDto.READY,
+            orderStatusDto = OrderStatusDto.PENDING,
             orderDateTime = Instant.parse("2026-09-03T17:15:00Z"),
             storeDto = storeById(assignedStore.id)!!,
             items = listOf(
@@ -527,7 +550,7 @@ object FakeBackendData {
                     orderIdDto = "ORD-1005",
                     productDto = products[1], // Lactose-Free Milk
                     quantity = 2,
-                    pickupStatus = ItemPickupStatusDto.PICKED,
+                    pickupStatus = ItemPickupStatusDto.PENDING,
                     pickedQuantity = 2
                 ),
                 OrderItemDto(
@@ -535,7 +558,7 @@ object FakeBackendData {
                     orderIdDto = "ORD-1005",
                     productDto = products[2], // Oat Milk
                     quantity = 1,
-                    pickupStatus = ItemPickupStatusDto.PICKED,
+                    pickupStatus = ItemPickupStatusDto.PENDING,
                     pickedQuantity = 1
                 )
             ),
@@ -544,7 +567,7 @@ object FakeBackendData {
 
         OrderDto(
             id = "ORD-1006",
-            orderStatusDto = OrderStatusDto.PICKING,
+            orderStatusDto = OrderStatusDto.PENDING,
             orderDateTime = Instant.parse("2026-09-03T14:30:00Z"),
             storeDto = storeById(assignedStore.id)!!,
             items = listOf(
@@ -562,7 +585,7 @@ object FakeBackendData {
                     orderIdDto = "ORD-1006",
                     productDto = products[5], // Margarine
                     quantity = 1,
-                    pickupStatus = ItemPickupStatusDto.PICKED,
+                    pickupStatus = ItemPickupStatusDto.PENDING,
                     pickedQuantity = 1
                 )
             ),
@@ -574,7 +597,7 @@ object FakeBackendData {
         // ---------------------------------------------------------
         OrderDto(
             id = "ORD-1007",
-            orderStatusDto = OrderStatusDto.READY,
+            orderStatusDto = OrderStatusDto.PENDING,
             orderDateTime = Instant.parse("2026-09-02T12:10:00Z"),
             storeDto = storeById(assignedStore.id)!!,
             items = listOf(
@@ -583,17 +606,17 @@ object FakeBackendData {
                     orderIdDto = "ORD-1007",
                     productDto = products[0],
                     quantity = 3,
-                    pickupStatus = ItemPickupStatusDto.SUBSTITUTE,
-                    pickedQuantity = 3,
-                    selectedSubstituteId = "3"
+                    pickupStatus = ItemPickupStatusDto.PENDING,
+                    pickedQuantity = 0,
+                    selectedSubstituteId = null
                 ),
                 OrderItemDto(
                     id = "OI-1014",
                     orderIdDto = "ORD-1007",
                     productDto = products[7],
                     quantity = 2,
-                    pickupStatus = ItemPickupStatusDto.PICKED,
-                    pickedQuantity = 2
+                    pickupStatus = ItemPickupStatusDto.PENDING,
+                    pickedQuantity = 0
                 )
             ),
             assignedAssociate = StoreAssociateDto("2", "emp002")

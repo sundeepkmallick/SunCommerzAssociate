@@ -28,14 +28,17 @@ fun OrderDetailsScreen(
     onOrderItemClick: (String, String) -> Unit
 ) {
 
-    val uiState by viewModel.uiStat.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     OrderDetails(
         uiState,
         contentType,
         onOrderItemSelected = { orderId, orderItemId ->
             onOrderItemClick(orderId, orderItemId)
         },
-        {onBackPressed()}
+        updateOrderStatus = {
+            viewModel.updateOrderStatus()
+        },
+        onBackPressed = {onBackPressed()}
     )
 }
 
@@ -44,6 +47,7 @@ fun OrderDetails(
     uiState: OrderDetailsUiState,
     contentType: UiContentType,
     onOrderItemSelected: (String, String) -> Unit,
+    updateOrderStatus: () -> Unit,
     onBackPressed: () -> Unit
 ) {
     when (uiState) {
@@ -60,10 +64,11 @@ fun OrderDetails(
                 OrderDetailsCompact(
                     uiState = uiState,
                     onBackPressed = onBackPressed,
-                    onOrderItemSelected = onOrderItemSelected
+                    onOrderItemSelected = onOrderItemSelected,
+                    updateOrderStatus = updateOrderStatus
                 )
             } else if (contentType == UiContentType.LIST_AND_DETAIL) {
-                /*OrderDetailsExpanded(
+                /*TODO OrderDetailsExpanded(
                     uiState = uiState,
                     onBackPressed = onBackPressed,
                     onOrderItemClick = { orderItemId ->

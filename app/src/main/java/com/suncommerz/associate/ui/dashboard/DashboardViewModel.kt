@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.suncommerz.associate.domain.model.OrderStatus
 import com.suncommerz.associate.domain.model.OrderUiModel
-import com.suncommerz.associate.domain.usecase.associate.ObserveUserUseCase
+import com.suncommerz.associate.domain.usecase.user.ObserveUserUseCase
 import com.suncommerz.associate.domain.usecase.orders.ObserveOrdersUseCase
 import com.suncommerz.associate.util.DateTimeUtils
 import dagger.hilt.android.lifecycle.HiltViewModel

@@ -1,0 +1,91 @@
+package com.suncommerz.associate.ui.orderitem
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.stringResource
+import androidx.constraintlayout.compose.ConstraintLayout
+import com.suncommerz.associate.R
+import com.suncommerz.associate.domain.model.Product
+
+@Composable
+fun ListItemSubstituteItem(
+    substituteProduct: Product,
+    selectedSubstituteId: String?,
+    onSubstituteProductItemSelected: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.padding(dimensionResource(R.dimen.padding_extra_small)),
+        colors = CardDefaults.cardColors(MaterialTheme.colorScheme.tertiaryContainer),
+        onClick = {
+            if(selectedSubstituteId != substituteProduct.id){
+                onSubstituteProductItemSelected()
+            }
+        },
+        shape = RoundedCornerShape(dimensionResource(R.dimen.padding)),
+        enabled = (selectedSubstituteId != substituteProduct.id)
+    ) {
+
+        ConstraintLayout(
+            modifier = Modifier.fillMaxWidth().padding(dimensionResource(R.dimen.padding)),
+        ) {
+            val (substituteProductDetails, tapIndicationArrow) = createRefs()
+
+            Column(
+                modifier = Modifier.constrainAs(substituteProductDetails){
+                    top.linkTo(parent.top)
+                    start.linkTo(parent.start)
+                    bottom.linkTo(parent.bottom)
+                }.wrapContentHeight().padding(dimensionResource(R.dimen.padding_small))
+            ) {
+                Text(
+                    modifier = Modifier.wrapContentSize().padding(dimensionResource(R.dimen.padding_extra_small)),
+                    text = substituteProduct.name,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    modifier = Modifier.wrapContentSize().padding(dimensionResource(R.dimen.padding_extra_small)),
+                    text = "${substituteProduct.price} ${substituteProduct.currency}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    modifier = Modifier.wrapContentSize().padding(dimensionResource(R.dimen.padding_extra_small)),
+                    text = substituteProduct.description,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
+
+            IconButton(
+                modifier = Modifier.constrainAs(tapIndicationArrow){
+                    end.linkTo(parent.end)
+                    top.linkTo(parent.top)
+                    bottom.linkTo(parent.bottom)
+                },
+                onClick = {}
+            ) {
+                Icon(
+                    imageVector = (selectedSubstituteId != substituteProduct.id).run {
+                        if(this) Icons.Default.Add else Icons.Default.Check
+                    },
+                    contentDescription = stringResource(R.string.content_description_icon_pickup_item)
+                )
+            }
+        }
+    }
+}

@@ -1,4 +1,4 @@
-package com.suncommerz.associate.domain.usecase.associate
+package com.suncommerz.associate.domain.usecase.user
 
 import com.suncommerz.associate.domain.model.StoreAssociate
 import com.suncommerz.associate.domain.repository.UserRepository

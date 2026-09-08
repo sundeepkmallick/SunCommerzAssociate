@@ -21,8 +21,7 @@
     <string name="label_item_category_description">"Product Description: %s"</string>
     <string name="label_item_availability">Availability: %s</string>
     <string name="label_item_quantity_ordered">"Quantity Ordered: %s"</string>
-    <string name="button_pick_manual">Pickup Item</string>
-    <string name="button_notify_manager">Notify Manager</string>
+    <string name="button_pick_manual">PICKUP ITEM</string>
     <string name="label_item_available">Available</string>
     <string name="label_item_substitution_available">Substitution Available</string>
     <string name="label_item_available_nearby_store">Available in Nearby Store(s)</string>
@@ -31,4 +30,16 @@
     <string name="label_item_out_of_stock">Out of Stock</string>
     <string name="label_item_available_quantity">Available Quantity: %s</string>
     <string name="content_description_icon_pickup_item">pickup item icon</string>
+    <string name="button_update_order">UPDATE ORDER</string>
+    <string name="item_pick_up_status_picked">PICKED</string>
+    <string name="item_pick_up_status_pending">PENDING</string>
+    <string name="item_pick_up_status_substituted">SUBSTITUTED</string>
+    <string name="item_pick_up_status_reserved">RESERVED</string>
+    <string name="item_pick_up_status_unavailable">UNAVAILABLE</string>
+    <string name="button_notify_manager">NOTIFY MANAGER</string>
+    <string name="button_notify_stock_low">NOTIFY STOCK LOW</string>
+    <string name="button_notify_out_of_stock">NOTIFY OUT OF STOCK</string>
+    <string name="notified_low_stock">Store manager has been notified about low stock.</string>
+    <string name="notified_out_of_stock">Store manager has been notified about the item being out of stock.</string>
+    <string name="notified_notified_manager">Store manager has been notified.</string>
 </resources>

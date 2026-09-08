@@ -11,11 +11,5 @@ data class OrderItemDto(
     val customerNotified: Boolean = false,
     val reservedStoreId: String? = null,
     val selectedSubstituteId: String? = null,
-    val substitutionReason: SubstitutionReason? = null
+    val substitutionReasonDto: SubstitutionReasonDto? = null
 )
-
-enum class SubstitutionReason {
-    OUT_OF_STOCK,
-    CUSTOMER_REQUEST,
-    ASSOCIATE_RECOMMENDATION
-}
