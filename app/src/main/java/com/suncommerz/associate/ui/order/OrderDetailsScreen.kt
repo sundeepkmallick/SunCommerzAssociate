@@ -25,7 +25,8 @@ fun OrderDetailsScreen(
     viewModel: OrderDetailsViewModel = hiltViewModel(),
     contentType: UiContentType,
     onBackPressed: () -> Boolean,
-    onOrderItemClick: (String, String) -> Unit
+    onOrderItemClick: (String, String) -> Unit,
+    onAiPickupClick: (String) -> Unit
 ) {
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -38,7 +39,10 @@ fun OrderDetailsScreen(
         updateOrderStatus = {
             viewModel.updateOrderStatus()
         },
-        onBackPressed = {onBackPressed()}
+        onBackPressed = {onBackPressed()},
+        onAiPickupClick = { orderId ->
+            onAiPickupClick(orderId)
+        }
     )
 }
 
@@ -48,7 +52,8 @@ fun OrderDetails(
     contentType: UiContentType,
     onOrderItemSelected: (String, String) -> Unit,
     updateOrderStatus: () -> Unit,
-    onBackPressed: () -> Unit
+    onBackPressed: () -> Unit,
+    onAiPickupClick: (String) -> Unit
 ) {
     when (uiState) {
         OrderDetailsUiState.Loading -> {
@@ -65,7 +70,8 @@ fun OrderDetails(
                     uiState = uiState,
                     onBackPressed = onBackPressed,
                     onOrderItemSelected = onOrderItemSelected,
-                    updateOrderStatus = updateOrderStatus
+                    updateOrderStatus = updateOrderStatus,
+                    onAiPickupClick = onAiPickupClick
                 )
             } else if (contentType == UiContentType.LIST_AND_DETAIL) {
                 /*TODO OrderDetailsExpanded(

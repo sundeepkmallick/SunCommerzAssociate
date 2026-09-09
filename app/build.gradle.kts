@@ -1,8 +1,12 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.google.services)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -10,6 +14,16 @@ android {
     compileSdk {
         version = release(37)
     }
+
+    val localProperties = Properties().apply {
+        val file = rootProject.file("local.properties")
+        if (file.exists()) {
+            file.inputStream().use { load(it) }
+        }
+    }
+
+    fun firebaseProperty(name: String): String =
+        providers.gradleProperty(name).orElse(localProperties.getProperty(name, "")).get()
 
     defaultConfig {
         applicationId = "com.suncommerz.associate"
@@ -19,6 +33,17 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "FIREBASE_API_KEY", "\"${firebaseProperty("FIREBASE_API_KEY")}\"")
+        buildConfigField("String", "FIREBASE_APP_ID", "\"${firebaseProperty("FIREBASE_APP_ID")}\"")
+        buildConfigField("String", "FIREBASE_PROJECT_ID", "\"${firebaseProperty("FIREBASE_PROJECT_ID")}\"")
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/INDEX.LIST"
+            excludes += "/META-INF/DEPENDENCIES"
+        }
     }
 
     buildTypes {
@@ -34,6 +59,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -62,4 +88,22 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     ksp(libs.hilt.compiler)
+
+    //Google Agent Development Kit
+    implementation(libs.google.adk.kotlin.core.android)
+    implementation(libs.google.adk.kotlin.firebase.android)
+    ksp(libs.google.adk.kotlin.processor)
+
+    // LiteRT-LM runtime
+    implementation(libs.google.adk.kotlin.litertlm.android)
+    //implementation(libs.litertlm)
+
+    // Firebase AI Logic (cloud Gemini backend for ADK)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.ai)
+    implementation(libs.firebase.appcheck.debug)
+
+    //Serialization
+    implementation(libs.kotlinx.serialization.json)
+
 }

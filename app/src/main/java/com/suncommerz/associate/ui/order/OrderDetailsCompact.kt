@@ -48,14 +48,13 @@ fun OrderDetailsCompact(
     uiState: OrderDetailsUiState.Loaded,
     onBackPressed: () -> Unit,
     onOrderItemSelected: (String, String) -> Unit,
-    updateOrderStatus: () -> Unit
+    updateOrderStatus: () -> Unit,
+    onAiPickupClick: (String) -> Unit
 ) {
     val orderUiModel = uiState.orderUiModel
     val isUpdateOrderStatusInProgress = uiState.isUpdateOrderStatusInProgress
 
-    OrderDetailsCompactContent(orderUiModel, onOrderItemSelected, updateOrderStatus, isUpdateOrderStatusInProgress)
-
-
+    OrderDetailsCompactContent(orderUiModel, onOrderItemSelected, updateOrderStatus, isUpdateOrderStatusInProgress, onAiPickupClick)
 }
 
 @Composable
@@ -63,7 +62,8 @@ fun OrderDetailsCompactContent(
     orderUiModel: OrderUiModel,
     onOrderItemSelected: (String, String) -> Unit,
     updateOrderStatus: () -> Unit,
-    isUpdateOrderStatusInProgress: Boolean
+    isUpdateOrderStatusInProgress: Boolean,
+    onAiPickupClick: (String) -> Unit
 ) {
     Surface {
         ConstraintLayout(
@@ -137,7 +137,7 @@ fun OrderDetailsCompactContent(
                 Button(
                     modifier = Modifier.fillMaxWidth().padding(dimensionResource(R.dimen.padding_small)),
                     onClick = {
-                        //TODO
+                        onAiPickupClick(orderUiModel.order.id)
                     }
                 ) {
                     Text(text = stringResource(R.string.button_pick_using_ai))
@@ -267,7 +267,8 @@ fun OrderDetailsCompactContentPreview() {
         ),
         onOrderItemSelected = { _, _ -> },
         updateOrderStatus = {},
-        isUpdateOrderStatusInProgress = false
+        isUpdateOrderStatusInProgress = false,
+        onAiPickupClick = {}
     )
 }
 

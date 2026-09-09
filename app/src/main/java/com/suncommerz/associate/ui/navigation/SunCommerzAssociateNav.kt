@@ -6,6 +6,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.suncommerz.associate.ui.aipickup.AIPickUpScreen
 import com.suncommerz.associate.ui.common.UiContentType
 import com.suncommerz.associate.ui.dashboard.DashboardScreen
 import com.suncommerz.associate.ui.order.OrderDetailsScreen
@@ -40,12 +41,24 @@ fun SunCommerzAssociateNav(
                         navController.navigate(
                             "${SunCommerzAssociateScreen.OrderItem.name}/${selectedOrderId}/${orderItemId}"
                         )
+                    },
+                    onAiPickupClick = { orderId ->
+                        navController.navigate(
+                            "${SunCommerzAssociateScreen.AIPickUp.name}/${orderId}"
+                        )
                     }
                 )
             }
 
             composable("${SunCommerzAssociateScreen.OrderItem.name}/{orderId}/{orderItemId}") {
                 OrderItemDetailsScreen(
+                    hiltViewModel(),
+                    onBackPressed = { navController.popBackStack() }
+                )
+            }
+
+            composable("${SunCommerzAssociateScreen.AIPickUp.name}/{orderId}") {
+                AIPickUpScreen(
                     hiltViewModel(),
                     onBackPressed = { navController.popBackStack() }
                 )
