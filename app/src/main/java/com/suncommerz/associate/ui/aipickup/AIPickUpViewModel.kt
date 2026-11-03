@@ -10,13 +10,18 @@ import com.google.adk.kt.sessions.InMemorySessionService
 import com.google.adk.kt.types.Content
 import com.google.adk.kt.types.Part
 import com.suncommerz.associate.ai.AIAgentManager
+import com.suncommerz.associate.domain.model.AssociateNotification
 import com.suncommerz.associate.domain.model.ItemPickupStatus
+import com.suncommerz.associate.domain.model.NotificationReasonType
 import com.suncommerz.associate.domain.model.OrderItem
-import com.suncommerz.associate.domain.model.Product
-import com.suncommerz.associate.domain.model.ProductCategory
 import com.suncommerz.associate.domain.model.StoreAssociate
 import com.suncommerz.associate.domain.model.StoreManager
 import com.suncommerz.associate.domain.repository.OrderRepository
+import com.suncommerz.associate.domain.usecase.notification.NotifyStoreManagerUseCase
+import com.suncommerz.associate.domain.usecase.orderitem.MarkItemPickedUseCase
+import com.suncommerz.associate.domain.usecase.orderitem.MarkItemUnavailableUseCase
+import com.suncommerz.associate.domain.usecase.orderitem.SelectSubstituteUseCase
+import com.suncommerz.associate.domain.usecase.orderitem.ReserveNearbyStoreUseCase
 import com.suncommerz.associate.domain.usecase.storemanager.ObserveStoreManagerUseCase
 import com.suncommerz.associate.domain.usecase.user.ObserveUserUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,23 +35,29 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
+import kotlin.time.Clock
 
 const val NEARBY_STORE_RADIUS = 3.00
 const val MIN_QUANTITY_TO_INDICATE_LOW = 2
+
 @HiltViewModel
 class AIPickUpViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val aiAgentManager: AIAgentManager,
     private val orderRepository: OrderRepository,
     private val observeUserUseCase: ObserveUserUseCase,
-    private val observeStoreManagerUseCase: ObserveStoreManagerUseCase
+    private val observeStoreManagerUseCase: ObserveStoreManagerUseCase,
+    private val reserveNearbyStoreUseCase: ReserveNearbyStoreUseCase,
+    private val markItemPickedUseCase: MarkItemPickedUseCase,
+    private val selectSubstituteUseCase: SelectSubstituteUseCase,
+    private val markItemUnavailableUseCase: MarkItemUnavailableUseCase,
+    private val notifyStoreManagerUseCase: NotifyStoreManagerUseCase
 ) : ViewModel() {
     private val orderId: String = checkNotNull(savedStateHandle["orderId"])
     private val assignedAssociateAndStoreManager =
         MutableStateFlow<Pair<StoreAssociate?, StoreManager?>?>(null)
 
     private val _uiState = MutableStateFlow<AIPickUpUiState>(AIPickUpUiState.Loading)
-
     val uiState: StateFlow<AIPickUpUiState> = _uiState.asStateFlow()
 
     private val sessionService = InMemorySessionService()
@@ -72,31 +83,23 @@ class AIPickUpViewModel @Inject constructor(
     }
 
     fun startAiPickup(orderId: String) {
-
         viewModelScope.launch {
-
-            _uiState.value =
-                AIPickUpUiState.Processing(
-                    currentStatus = "Initializing AI...",
-                    processedItems = emptyList()
-                )
+            _uiState.value = AIPickUpUiState.Processing(
+                currentStatus = "Initializing AI...",
+                processedItems = emptyList()
+            )
 
             try {
-                val (associate, manager) = assignedAssociateAndStoreManager
-                    .filterNotNull()
-                    .first()
-
+                val (associate, _) = assignedAssociateAndStoreManager.filterNotNull().first()
                 val agent = aiAgentManager.getRootOrchestratorAgent()
-                val runner = InMemoryRunner(
-                    agent = agent,
-                    sessionService = sessionService
-                )
-
+                val runner = InMemoryRunner(agent = agent, sessionService = sessionService)
                 val order = orderRepository.observeOrder(orderId).first()
 
                 if (order == null) {
-                    _uiState.value =
-                        AIPickUpUiState.Error(message = "Order not found", orderId = orderId)
+                    _uiState.value = AIPickUpUiState.Error(
+                        message = "Order not found",
+                        orderId = orderId
+                    )
                     return@launch
                 }
 
@@ -107,18 +110,15 @@ class AIPickUpViewModel @Inject constructor(
                 }
 
                 val proposals = mutableListOf<AIPickUpItemProposal>()
-                val sessionId = "pickup_$orderId"
 
                 items.forEachIndexed { index, item ->
                     _uiState.update { state ->
+                        val status = "Analyzing item ${index + 1}/${items.size}: ${item.product.name}..."
                         if (state is AIPickUpUiState.Processing) {
-                            state.copy(
-                                currentStatus = "Analyzing item ${index + 1}/${items.size}: ${item.product.name}...",
-                                processedItems = proposals.toList()
-                            )
+                            state.copy(currentStatus = status, processedItems = proposals.toList())
                         } else {
                             AIPickUpUiState.Processing(
-                                currentStatus = "Analyzing item ${index + 1}/${items.size}: ${item.product.name}...",
+                                currentStatus = status,
                                 processedItems = proposals.toList()
                             )
                         }
@@ -128,47 +128,42 @@ class AIPickUpViewModel @Inject constructor(
                         role = "user",
                         parts = listOf(
                             Part(
-                                text =   """
-                                            Process this Order.
-                            
-                                            Order ID: $orderId
-                                            Product ID: ${item.product.id}
-                                            Required Quantity: ${item.requestedQuantity}
-                                            Current Store ID: ${order.store.id}
-                                            Near By Radisu: $NEARBY_STORE_RADIUS
-                                            Minimum Quantity to indicate low stock: $MIN_QUANTITY_TO_INDICATE_LOW
-                            
-                                            Return exactly one of:
-                                            PICKED
-                                            RESERVE_NEARBY_STORE(storeId)
-                                            SUBSTITUTE(productId)
-                                            UNAVAILABLE
-                                        """.trimIndent()
+                                text = """
+                                    Process this order item.
+
+                                    Order ID: $orderId
+                                    Product ID: ${item.product.id}
+                                    Required Quantity: ${item.requestedQuantity}
+                                    Current Store ID: ${order.store.id}
+                                    Nearby Radius: $NEARBY_STORE_RADIUS
+                                    Minimum Quantity to indicate low stock: $MIN_QUANTITY_TO_INDICATE_LOW
+
+                                    Return exactly one action:
+                                    PICKED
+                                    RESERVE_NEARBY_STORE(storeId)
+                                    SUBSTITUTE(productId)
+                                    UNAVAILABLE
+                                """.trimIndent()
                             )
                         )
                     )
 
+                    // Each item is an independent decision; don't carry prior item chat history forward.
                     val response = runAgent(
                         runner = runner,
                         userId = associate?.id.orEmpty(),
-                        sessionId = sessionId,
+                        sessionId = "pickup_${orderId}_${item.id}",
                         prompt = prompt
                     )
 
-                    val proposal = parseAgentResponse(
-                        item = item,
-                        response = response
-                    )
-
+                    val proposal = parseAgentResponse(item = item, response = response)
                     proposals.add(proposal)
 
                     _uiState.update { state ->
                         if (state is AIPickUpUiState.Processing) {
                             state.copy(
-                                currentStatus =
-                                    "Completed ${index + 1}/${items.size}",
-                                processedItems =
-                                    proposals.toList()
+                                currentStatus = "Completed ${index + 1}/${items.size}",
+                                processedItems = proposals.toList()
                             )
                         } else {
                             state
@@ -176,17 +171,12 @@ class AIPickUpViewModel @Inject constructor(
                     }
                 }
 
-                _uiState.value =
-                    AIPickUpUiState.ProposalReady(
-                        proposals = proposals.toList()
-                    )
-
+                _uiState.value = AIPickUpUiState.ProposalReady(proposals = proposals.toList())
             } catch (e: Exception) {
-                _uiState.value =
-                    AIPickUpUiState.Error(
-                        message = e.message ?: "An unknown error occurred",
-                        orderId = orderId
-                    )
+                _uiState.value = AIPickUpUiState.Error(
+                    message = e.message ?: "An unknown error occurred",
+                    orderId = orderId
+                )
             }
         }
     }
@@ -197,8 +187,7 @@ class AIPickUpViewModel @Inject constructor(
         sessionId: String,
         prompt: Content
     ): String {
-
-        val responses = mutableListOf<String>()
+        val assistantTexts = mutableListOf<String>()
 
         runner.runAsync(
             userId = userId,
@@ -208,34 +197,47 @@ class AIPickUpViewModel @Inject constructor(
             stateDelta = emptyMap(),
             runConfig = RunConfig()
         ).collect { event ->
-
             Log.d("AI_PICKUP_DEBUG", "AI Event: $event")
 
-            val text = event.toString()
-
-            if (text.isNotBlank()) {
-                responses.add(text)
+            // ADK emits tool-call/tool-response events as well as assistant messages.
+            // Only assistant-authored text is suitable for parsing as a pickup action.
+            if (event.author == "PickupOrchestrator") {
+                event.content?.parts
+                    .orEmpty()
+                    .mapNotNull { part -> part.text?.takeIf(String::isNotBlank) }
+                    .forEach(assistantTexts::add)
             }
         }
 
-        return responses.lastOrNull().orEmpty()
+        return assistantTexts.lastOrNull()
+            ?: throw IllegalStateException("AI agent completed without an assistant text response")
     }
 
     private fun parseAgentResponse(
         item: OrderItem,
         response: String
     ): AIPickUpItemProposal {
-
         val normalized = response.trim().uppercase()
 
         return when {
-            normalized.contains("RESERVE_NEARBY_STORE") -> {
+            normalized == "PICKED" -> AIPickUpItemProposal(
+                orderItemId = item.id,
+                productName = item.product.name,
+                proposal = ProposalType.PICKED,
+                detail = ""
+            )
 
-                val storeId = extractValue(
-                    normalized,
-                    "RESERVE_NEARBY_STORE"
-                )
+            normalized == "UNAVAILABLE" -> AIPickUpItemProposal(
+                orderItemId = item.id,
+                productName = item.product.name,
+                proposal = ProposalType.UNAVAILABLE,
+                detail = ""
+            )
 
+            Regex("^RESERVE_NEARBY_STORE\\(([^()\\s]+)\\)$").matches(normalized) -> {
+                val storeId = Regex("^RESERVE_NEARBY_STORE\\(([^()\\s]+)\\)$")
+                    .matchEntire(normalized)!!
+                    .groupValues[1]
                 AIPickUpItemProposal(
                     orderItemId = item.id,
                     productName = item.product.name,
@@ -244,14 +246,10 @@ class AIPickUpViewModel @Inject constructor(
                 )
             }
 
-            normalized.contains("SUBSTITUTE") -> {
-
-                val productId =
-                    extractValue(
-                        normalized,
-                        "SUBSTITUTE"
-                    )
-
+            Regex("^SUBSTITUTE\\(([^()\\s]+)\\)$").matches(normalized) -> {
+                val productId = Regex("^SUBSTITUTE\\(([^()\\s]+)\\)$")
+                    .matchEntire(normalized)!!
+                    .groupValues[1]
                 AIPickUpItemProposal(
                     orderItemId = item.id,
                     productName = item.product.name,
@@ -260,147 +258,96 @@ class AIPickUpViewModel @Inject constructor(
                 )
             }
 
-            normalized.contains("PICKED") -> {
-
-                AIPickUpItemProposal(
-                    orderItemId = item.id,
-                    productName = item.product.name,
-                    proposal = ProposalType.PICKED,
-                    detail = ""
-                )
-            }
-
-            else -> {
-
-                AIPickUpItemProposal(
-                    orderItemId = item.id,
-                    productName = item.product.name,
-                    proposal = ProposalType.UNAVAILABLE,
-                    detail = ""
-                )
-            }
+            else -> throw IllegalStateException(
+                "AI agent returned an invalid pickup action for ${item.product.name}: $response"
+            )
         }
     }
 
-    private fun extractValue(
-        response: String,
-        command: String
-    ): String {
-
-        val regex =
-            Regex(
-                "$command\\(([^)]+)\\)"
-            )
-
-        return regex
-            .find(response)
-            ?.groupValues
-            ?.getOrNull(1)
-            .orEmpty()
-    }
-
-
     fun approveProposals() {
-
         viewModelScope.launch {
-
-            val currentState =
-                _uiState.value
-                        as? AIPickUpUiState.ProposalReady
-                    ?: return@launch
-
-            _uiState.value =
-                currentState.copy(
-                    isUpdating = true
-                )
+            val currentState = _uiState.value as? AIPickUpUiState.ProposalReady ?: return@launch
+            _uiState.value = currentState.copy(isUpdating = true)
 
             try {
                 val order = orderRepository.observeOrder(orderId).first()
-
                 if (order == null) {
-                    _uiState.value =
-                        AIPickUpUiState.Error(
-                            message = "Order not found",
-                            orderId = orderId
-                        )
+                    _uiState.value = AIPickUpUiState.Error(
+                        message = "Order not found",
+                        orderId = orderId
+                    )
                     return@launch
                 }
 
+                val (associate, manager) = assignedAssociateAndStoreManager
+                    .filterNotNull()
+                    .first()
+
                 currentState.proposals.forEach { proposal ->
-
-                    val existingItem =
-                        order.items.find {
-                            it.id == proposal.orderItemId
-                        }
-
-                    if (existingItem == null) {
-                        return@forEach
-                    }
+                    val orderItem = order.items.find { it.id == proposal.orderItemId }
+                        ?: throw IllegalStateException(
+                            "Order item ${proposal.orderItemId} no longer exists"
+                        )
 
                     when (proposal.proposal) {
-
                         ProposalType.PICKED -> {
-
-                            orderRepository.updateOrderItem(
+                            // Use the same domain operation as the standard order-item screen.
+                            markItemPickedUseCase(
                                 orderId = orderId,
-                                item =
-                                    existingItem.copy(
-                                        pickupStatus =
-                                            ItemPickupStatus.PICKED,
-                                        pickedQuantity =
-                                            existingItem.requestedQuantity
-                                    )
+                                orderItemId = orderItem.id,
+                                pickedQuantity = orderItem.requestedQuantity
                             )
                         }
 
                         ProposalType.SUBSTITUTE -> {
-
-                            orderRepository.updateOrderItem(
+                            selectSubstituteUseCase(
                                 orderId = orderId,
-                                item =
-                                    existingItem.copy(
-                                        pickupStatus =
-                                            ItemPickupStatus.SUBSTITUTE,
-                                        pickedQuantity =
-                                            existingItem.requestedQuantity,
-                                        selectedSubstituteId =
-                                            proposal.detail
-                                    )
+                                orderItemId = orderItem.id,
+                                substituteProductId = proposal.detail,
+                                pickedQuantity = orderItem.requestedQuantity
                             )
                         }
 
                         ProposalType.PICK_FROM_OTHER_STORE -> {
-                            //TODO
+                            reserveNearbyStoreUseCase(
+                                orderId = orderId,
+                                orderItemId = orderItem.id,
+                                nearbyStoreId = proposal.detail,
+                                pickedQuantity = orderItem.requestedQuantity
+                            )
                         }
 
                         ProposalType.UNAVAILABLE -> {
-
-                            orderRepository.updateOrderItem(
+                            // Match the normal out-of-stock flow: update status and notification flags,
+                            // then notify the assigned store manager.
+                            markItemUnavailableUseCase(
                                 orderId = orderId,
-                                item =
-                                    existingItem.copy(
-                                        pickupStatus = ItemPickupStatus.UNAVAILABLE,
-                                        pickedQuantity = 0
-                                    )
+                                orderItemId = orderItem.id,
+                                notifyManager = true,
+                                notifyCustomer = true
+                            )
+
+                            notifyStoreManagerUseCase(
+                                AssociateNotification(
+                                    notificationReasonType = NotificationReasonType.INVENTORY_ISSUE_OUT_OF_STOCK,
+                                    orderId = orderId,
+                                    productId = orderItem.product.id,
+                                    reportedByAssociateId = associate?.id.orEmpty(),
+                                    reportedToManagerId = manager?.id.orEmpty(),
+                                    reportDateTime = Clock.System.now()
+                                )
                             )
                         }
                     }
                 }
 
-                _uiState.value =
-                    currentState.copy(
-                        isUpdating = false
-                    )
-
+                _uiState.value = currentState.copy(isUpdating = false)
+                _uiState.value = currentState.copy(isApprovedAndOrderUpdated = true)
             } catch (e: Exception) {
-
-                _uiState.value =
-                    AIPickUpUiState.Error(
-                        message =
-                            "Failed to update order: " +
-                                    (e.message ?: "Unknown error"),
-                        orderId = orderId
-                    )
+                _uiState.value = AIPickUpUiState.Error(
+                    message = "Failed to update order: ${e.message ?: "Unknown error"}",
+                    orderId = orderId
+                )
             }
         }
     }

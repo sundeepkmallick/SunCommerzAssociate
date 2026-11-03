@@ -42,4 +42,10 @@
     <string name="notified_low_stock">Store manager has been notified about low stock.</string>
     <string name="notified_out_of_stock">Store manager has been notified about the item being out of stock.</string>
     <string name="notified_notified_manager">Store manager has been notified.</string>
+    <string name="ai_pickup_proposal_approved_and_order_updated">AI pickup proposal approved and order updated!</string>
+    <string name="button_approve_ai_proposal_and_update_order"><![CDATA[Approve & Update Order]]></string>
+    <string name="button_back">Back</string>
+    <string name="snackbar_action_okay">Okay</string>
+    <string name="text_button_retry">Retry</string>
+    <string name="text_button_button">Back</string>
 </resources>
