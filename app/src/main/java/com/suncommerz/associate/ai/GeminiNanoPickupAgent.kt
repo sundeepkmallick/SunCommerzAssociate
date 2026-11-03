@@ -85,12 +85,9 @@ class GeminiNanoPickupAgent @Inject constructor(
                 invokedTools = invokedTools,
             )
         } finally {
-            // AgentRunner owns the supplied GenerativeModel after construction.
-            if (runner != null) {
-                runner.close()
-            } else {
-                model.close()
-            }
+            runner?.close()
+            // GenerativeModel.close() is safe to call more than once.
+            model.close()
         }
     }
 }
