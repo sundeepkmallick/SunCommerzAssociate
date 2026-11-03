@@ -1,56 +1,95 @@
-# SunCommerzAssociate
+# SunCommerz Associate
 
-An Android application designed for store associates to manage the Buy Online, Pick Up In Store (BOPIS) fulfillment process efficiently.
+An Android application for store associates managing **Buy Online, Pick Up In Store (BOPIS)** order fulfillment. The app guides associates through picking customer orders, resolving unavailable items, handling substitutions, and coordinating inventory issues.
 
-## Overview
+> **Project status:** Setup requires Firebase configuration. AI features depend on the configured model provider and device/runtime support.
 
-The app streamlines the picking process for customer orders, handling complex scenarios such as product substitutions and inventory issues, ensuring a seamless experience from order placement to customer pickup.
+## Features
 
-## Key Features
+- **Pickup order workflow** — review orders and work through their items.
+- **Guided item picking** — record picked items and handle exceptions.
+- **Substitutions** — discover suitable substitute products and manage substitution decisions.
+- **Nearby-store fulfillment** — look for inventory at nearby stores when the current store cannot fulfill an item.
+- **Inventory issue reporting** — surface out-of-stock issues to store management.
+- **Associate dashboard and notifications** — view work and receive relevant updates.
+- **AI-assisted pickup proposals** — an AI agent can reason over order items and read inventory/store data through tools. Associates review and approve proposed order changes; the AI should not silently commit the pickup.
 
-- **Order Management**: Browse and manage customer orders slated for pickup.
-- **Smart Picking**: Guided picking process for order items with support for substitutions.
-- **Inventory Reporting**: Quickly notify managers about depleted or low-stock items on shelves.
-- **Substitution Handling**: Manage product substitutions when the original item is unavailable, including specifying substitution reasons.
-- **Associate Notifications**: Real-time alerts for critical tasks and updates.
-- **Dashboard**: A centralized view of pending tasks and priorities for store associates.
+## AI pickup agent
 
-## Technical Stack
+The AI pickup workflow uses Google's Agent Development Kit (ADK) for Kotlin and Firebase AI Logic. The agent can call application tools to look up product stock, store inventory, nearby stores, available substitute candidates, store products, and prior substitution history.
 
-- **Language**: [Kotlin](https://kotlinlang.org/)
-- **UI Framework**: [Jetpack Compose](https://developer.android.com/jetpack/compose)
-- **Design System**: [Material 3](https://m3.material.io/)
-- **Dependency Injection**: [Hilt](https://developer.android.com/hilt)
-- **Navigation**: [Compose Navigation](https://developer.android.com/jetpack/compose/navigation)
-- **Architecture**: Clean Architecture (Data -> Domain -> UI)
+Tool results are grounded in the app's repositories and domain use cases. Treat model output as a proposal: verify it and use the in-app associate approval flow before applying order changes.
+
+### Model/provider notes
+
+The current main branch uses the Firebase-backed model provider. An on-device Gemini Nano path is being explored separately. Local model availability, device compatibility, tool support, and runtime behavior are platform-dependent. Do not assume every Android device can run Gemini Nano or that a device's consumer AI features expose an app-accessible model API.
+
+AI behavior may evolve as provider and agent implementations change. Review the AI implementation in the app source under the AI package.
+
+## Technology
+
+- Kotlin
+- Jetpack Compose and Material 3
+- AndroidX Navigation
+- Hilt dependency injection
+- Clean Architecture-inspired presentation, domain, and data layers
+- Google ADK for Kotlin
+- Firebase AI Logic
+- Kotlin Serialization
+- Gradle Version Catalog
 
 ## Architecture
 
-The project follows **Clean Architecture** principles to ensure scalability, testability, and maintainability:
+- **Presentation/UI:** Compose screens and ViewModels manage UI state and interactions.
+- **Domain:** business entities, repository contracts, and use cases represent application rules.
+- **Data:** repository implementations, data sources, DTOs, and mappers handle data access.
+- **AI:** agent orchestration and model providers connect model output to domain tools. Keep tool operations constrained and use domain use cases for business mutations.
 
-- **UI Layer**: Feature-based modules (Dashboard, Orders, Order Items) using state-hoisting and ViewModels for state management.
-- **Domain Layer**: Contains business logic, use cases, and pure domain models (e.g., `Order`, `Product`, `OrderItem`). This layer is independent of any framework.
-- **Data Layer**: Implements repositories and handles data retrieval from local/remote sources, including DTOs and mappers to convert data to domain models.
+This separation helps keep business rules independent of UI and model-provider details.
 
-## Media
+## Requirements
+
+- Android Studio with a compatible Android SDK and Gradle/JDK setup.
+- Android device or emulator meeting the configured minimum SDK (API 26).
+- A Firebase project configured for the application.
+- Firebase configuration values used by the Gradle build.
+
+The project currently configures compileSdk and targetSdk as 37. Use the SDK versions declared by the project rather than assuming an older Android SDK is sufficient.
+
+## Getting started
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/sundeepkmallick/SunCommerzAssociate.git
+   cd SunCommerzAssociate
+   ```
+2. Open the project in Android Studio and allow Gradle sync, or use the Gradle wrapper.
+3. Configure Firebase:
+   - Create or select a Firebase project and register the Android application with package ID `com.suncommerz.associate`.
+   - Follow Firebase's Android setup guidance for the Google Services Gradle plugin and add `google-services.json` as required by your setup.
+   - Provide `FIREBASE_API_KEY`, `FIREBASE_APP_ID`, and `FIREBASE_PROJECT_ID`. The build reads Gradle properties first, then `local.properties`.
+   - Keep local credentials/configuration out of commits. Never put private service-account keys or server credentials in the Android app.
+4. Build and run:
+   ```bash
+   ./gradlew :app:assembleDebug
+   ```
+   On Windows, use `gradlew.bat :app:assembleDebug`.
+
+> Firebase setup and access to the configured project are necessary for the cloud AI path. Values embedded in Android applications should be treated as public client configuration and protected with appropriate Firebase restrictions and App Check—not as secrets.
+
+## Media and diagrams
 
 - [Screenshots](docs/screenshots)
-- [Screen Recordings](docs/screenrecordings)
+- [Screen recordings](docs/screenrecordings)
+- [Application flow diagram](docs/SunCommerz_flow_diagram_improvised_final.png)
+- [Screen flow](docs/SunCommerz_screen_flow.png)
 
-## Flow & Design
+## Use case
 
-### Flow Diagram
-<img src="docs/SunCommerz_flow_diagram_improvised_final.png" alt="Application Flow Diagram" width="300"/>
+Retail customers place orders online for pickup at a store. Associates prepare orders by picking requested items. If an item is unavailable, the workflow can consider a substitute or another store, while inventory issues can be reported for follow-up. The app supports store operations while keeping associates in control of fulfillment decisions.
 
-### Screen Flow
-<img src="docs/SunCommerz_screen_flow.png" alt="Application Screen Flow" width="500"/>
+## Licensing
 
-## Requirements & Use Case
+The original code in this repository is offered under the [MIT License](LICENSE).
 
-Retail stores support a variety of sales fulfilment models, one of the most common scenarios being Buy Online, Pick Up In Store (BOPIS). In this process, customers place orders online, which creates sales orders for the store. Store associates pick the ordered items and prepare them for collection.
-
-**Key Challenges Addressed:**
-- **Product Unavailability**: Support for similar product substitutions.
-- **Cross-Store Availability**: Handling items available at nearby locations.
-- **System Synchronization**: Real-time updates to notify customers when orders are ready.
-- **Inventory Maintenance**: Associate-driven reporting of empty shelves.
+Third-party libraries, Android/Google services, and AI models/services have their own terms and licenses. This repository's MIT license does not relicense those dependencies, Google services, or model weights. Review their respective terms before redistribution or use.
