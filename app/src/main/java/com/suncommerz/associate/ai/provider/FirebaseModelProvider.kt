@@ -10,7 +10,7 @@ import javax.inject.Singleton
 @Singleton
 class FirebaseModelProvider @Inject constructor() {
     companion object {
-        private const val MODEL_NAME = "gemini-flash-latest"
+        private const val MODEL_NAME = "gemini-3.5-flash-lite"
     }
 
     fun getModel(): Model {
