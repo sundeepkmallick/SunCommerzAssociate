@@ -3,6 +3,7 @@ package com.suncommerz.associate.ai
 import com.google.adk.kt.agents.Instruction
 import com.google.adk.kt.agents.LlmAgent
 import com.google.adk.kt.annotations.Tool
+import com.google.adk.kt.models.Model
 import com.suncommerz.associate.ai.provider.FirebaseModelProvider
 import com.suncommerz.associate.domain.repository.InventoryRepository
 import com.suncommerz.associate.domain.repository.OrderRepository
@@ -28,44 +29,26 @@ class AIAgentManager @Inject constructor(
     private val getSubstituteProductsUseCase: GetSubstituteProductsUseCase,
     private val isProductAvailableUseCase: IsProductAvailableUseCase
 ) {
-    private var rootOrchestratorAgent: LlmAgent? = null
+    @Volatile
+    private var firebaseAgent: LlmAgent? = null
 
     inner class InventoryTools {
-
         @Tool
-        suspend fun getProductStockInStore(
-            productId: String,
-            storeId: String
-        ): String {
-            println("AI_TOOL: getProductStockInStore START")
-
+        suspend fun getProductStockInStore(productId: String, storeId: String): String {
             val inventory = inventoryRepository
                 .observeProductInventory(storeId, productId)
                 .first()
-            val result = Json.encodeToString(inventory)
-
-            println("AI_TOOL: getProductStockInStore END: $result")
-
-            return result
+            return Json.encodeToString(inventory)
         }
 
         @Tool
-        suspend fun getStoreInventory(
-            storeId: String
-        ): String {
-            println("AI_TOOL: getStoreInventory START")
-
+        suspend fun getStoreInventory(storeId: String): String {
             val storeInventory = inventoryRepository.observeInventory(storeId).first()
-            val result = Json.encodeToString(storeInventory)
-
-            println("AI_TOOL: getStoreInventory END: $result")
-
-            return result
+            return Json.encodeToString(storeInventory)
         }
     }
 
     inner class StoreTools {
-
         @Tool
         suspend fun findNearbyStores(
             productId: String,
@@ -73,11 +56,10 @@ class AIAgentManager @Inject constructor(
             requestedQuantity: Int,
             radiusMeters: Double
         ): String {
-            println("AI_TOOL: findNearbyStores START")
+            require(requestedQuantity > 0) { "Requested quantity must be greater than zero" }
+            require(radiusMeters > 0) { "Search radius must be greater than zero" }
 
-            val currentStore = storeRepository
-                .getStore(currentStoreId)
-                .first()
+            val currentStore = storeRepository.getStore(currentStoreId).first()
                 ?: return "[]"
 
             val nearbyStores = findNearbyStoresWithProductUseCase.invoke(
@@ -86,15 +68,11 @@ class AIAgentManager @Inject constructor(
                 quantity = requestedQuantity,
                 radiusMeters = radiusMeters
             )
-
-            println("AI_TOOL: findNearbyStores END")
-
             return Json.encodeToString(nearbyStores)
         }
     }
 
     inner class SubstitutionTools {
-
         @Tool
         suspend fun getAvailableSubstitutes(
             productId: String,
@@ -118,49 +96,37 @@ class AIAgentManager @Inject constructor(
         }
 
         @Tool
-        suspend fun observeStoreProductsUseCase(
-            storeId: String
-        ): String {
-            println("AI_TOOL: observeStoreProductsUseCase START")
-
+        suspend fun observeStoreProductsUseCase(storeId: String): String {
             val products = observeStoreProductsUseCase.invoke(storeId).first()
-            val result = Json.encodeToString(products)
-            println("AI_TOOL: observeStoreProductsUseCase END")
-
-            return result
+            return Json.encodeToString(products)
         }
 
         @Tool
         suspend fun pastOrderWithSubstitutionHistory(productId: String): String {
-            println("AI_TOOL: pastOrderWithSubstitutionHistory START")
-
-            val substitutionHistory = orderRepository.pastOrderWithSubstitutionHistory(productId).first()
-            val result = Json.encodeToString(substitutionHistory)
-            println("AI_TOOL: pastOrderWithSubstitutionHistory END")
-
-            return result
+            val history = orderRepository.pastOrderWithSubstitutionHistory(productId).first()
+            return Json.encodeToString(history)
         }
     }
 
+    /** Creates a fresh ADK agent with shared pickup instructions and read-only tools. */
+    fun createPickupAgent(model: Model): LlmAgent = LlmAgent(
+        name = "PickupOrchestrator",
+        description = "Coordinates product pickup for customer orders.",
+        model = model,
+        instruction = Instruction(PickupAgentInstructions.SYSTEM),
+        tools = listOf(
+            InventoryTools().generatedTools(),
+            StoreTools().generatedTools(),
+            SubstitutionTools().generatedTools()
+        ).flatten()
+    )
+
     suspend fun getRootOrchestratorAgent(): LlmAgent {
-        rootOrchestratorAgent?.let { agent ->
-            return agent
+        firebaseAgent?.let { return it }
+        val created = createPickupAgent(firebaseModelProvider.getModel())
+        synchronized(this) {
+            if (firebaseAgent == null) firebaseAgent = created
+            return firebaseAgent ?: created
         }
-
-        val model = firebaseModelProvider.getModel()
-        val agent = LlmAgent(
-            name = "PickupOrchestrator",
-            description = "Coordinates product pickup for customer orders.",
-            model = model,
-            instruction = Instruction(PickupAgentInstructions.SYSTEM),
-            tools = listOf(
-                InventoryTools().generatedTools(),
-                StoreTools().generatedTools(),
-                SubstitutionTools().generatedTools()
-            ).flatten()
-        )
-
-        rootOrchestratorAgent = agent
-        return agent
     }
 }
