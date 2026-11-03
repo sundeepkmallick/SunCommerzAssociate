@@ -10,8 +10,8 @@ import com.google.adk.kt.sessions.InMemorySessionService
 import com.google.adk.kt.types.Content
 import com.google.adk.kt.types.Part
 import com.suncommerz.associate.ai.AIAgentManager
+import com.suncommerz.associate.ai.HybridPickupAgentManager
 import com.suncommerz.associate.domain.model.AssociateNotification
-import com.suncommerz.associate.domain.model.ItemPickupStatus
 import com.suncommerz.associate.domain.model.NotificationReasonType
 import com.suncommerz.associate.domain.model.OrderItem
 import com.suncommerz.associate.domain.model.StoreAssociate
@@ -44,6 +44,7 @@ const val MIN_QUANTITY_TO_INDICATE_LOW = 2
 class AIPickUpViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val aiAgentManager: AIAgentManager,
+    private val hybridPickupAgentManager: HybridPickupAgentManager,
     private val orderRepository: OrderRepository,
     private val observeUserUseCase: ObserveUserUseCase,
     private val observeStoreManagerUseCase: ObserveStoreManagerUseCase,
@@ -59,8 +60,6 @@ class AIPickUpViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow<AIPickUpUiState>(AIPickUpUiState.Loading)
     val uiState: StateFlow<AIPickUpUiState> = _uiState.asStateFlow()
-
-    private val sessionService = InMemorySessionService()
 
     init {
         getAssignedAssociateAndStoreManager()
@@ -92,7 +91,10 @@ class AIPickUpViewModel @Inject constructor(
             try {
                 val (associate, _) = assignedAssociateAndStoreManager.filterNotNull().first()
                 val agent = aiAgentManager.getRootOrchestratorAgent()
-                val runner = InMemoryRunner(agent = agent, sessionService = sessionService)
+                val runner = InMemoryRunner(
+                    agent = agent,
+                    sessionService = InMemorySessionService()
+                )
                 val order = orderRepository.observeOrder(orderId).first()
 
                 if (order == null) {
@@ -124,38 +126,37 @@ class AIPickUpViewModel @Inject constructor(
                         }
                     }
 
-                    val prompt = Content(
-                        role = "user",
-                        parts = listOf(
-                            Part(
-                                text = """
-                                    Process this order item.
+                    val prompt = """
+                        Process this order item.
 
-                                    Order ID: $orderId
-                                    Product ID: ${item.product.id}
-                                    Required Quantity: ${item.requestedQuantity}
-                                    Current Store ID: ${order.store.id}
-                                    Nearby Radius: $NEARBY_STORE_RADIUS
-                                    Minimum Quantity to indicate low stock: $MIN_QUANTITY_TO_INDICATE_LOW
+                        Order ID: $orderId
+                        Product ID: ${item.product.id}
+                        Required Quantity: ${item.requestedQuantity}
+                        Current Store ID: ${order.store.id}
+                        Nearby Radius (meters): $NEARBY_STORE_RADIUS
+                        Minimum Quantity to indicate low stock: $MIN_QUANTITY_TO_INDICATE_LOW
 
-                                    Return exactly one action:
-                                    PICKED
-                                    RESERVE_NEARBY_STORE(storeId)
-                                    SUBSTITUTE(productId)
-                                    UNAVAILABLE
-                                """.trimIndent()
+                        Follow the system instructions and use the inventory tools.
+                        Return exactly one valid pickup action.
+                    """.trimIndent()
+
+                    val sessionId = "pickup_${orderId}_${item.id}"
+                    val response = hybridPickupAgentManager.runPickupItem(prompt) {
+                        runFirebaseAgent(
+                            runner = runner,
+                            userId = associate?.id.orEmpty(),
+                            sessionId = sessionId,
+                            prompt = Content(
+                                role = "user",
+                                parts = listOf(Part(text = prompt))
                             )
                         )
-                    )
+                    }
 
-                    // Each item is an independent decision; don't carry prior item chat history forward.
-                    val response = runAgent(
-                        runner = runner,
-                        userId = associate?.id.orEmpty(),
-                        sessionId = "pickup_${orderId}_${item.id}",
-                        prompt = prompt
+                    Log.d(
+                        "AI_PICKUP_DEBUG",
+                        "Completed item ${item.product.id} using ${hybridPickupAgentManager.getCurrentBackend()}"
                     )
-
                     val proposal = parseAgentResponse(item = item, response = response)
                     proposals.add(proposal)
 
@@ -181,7 +182,7 @@ class AIPickUpViewModel @Inject constructor(
         }
     }
 
-    private suspend fun runAgent(
+    private suspend fun runFirebaseAgent(
         runner: InMemoryRunner,
         userId: String,
         sessionId: String,
@@ -197,10 +198,8 @@ class AIPickUpViewModel @Inject constructor(
             stateDelta = emptyMap(),
             runConfig = RunConfig()
         ).collect { event ->
-            Log.d("AI_PICKUP_DEBUG", "AI Event: $event")
+            Log.d("AI_PICKUP_DEBUG", "Firebase AI Event: $event")
 
-            // ADK emits tool-call/tool-response events as well as assistant messages.
-            // Only assistant-authored text is suitable for parsing as a pickup action.
             if (event.author == "PickupOrchestrator") {
                 event.content?.parts
                     .orEmpty()
@@ -210,7 +209,7 @@ class AIPickUpViewModel @Inject constructor(
         }
 
         return assistantTexts.lastOrNull()
-            ?: throw IllegalStateException("AI agent completed without an assistant text response")
+            ?: throw IllegalStateException("Firebase AI agent completed without an assistant text response")
     }
 
     private fun parseAgentResponse(
@@ -291,7 +290,6 @@ class AIPickUpViewModel @Inject constructor(
 
                     when (proposal.proposal) {
                         ProposalType.PICKED -> {
-                            // Use the same domain operation as the standard order-item screen.
                             markItemPickedUseCase(
                                 orderId = orderId,
                                 orderItemId = orderItem.id,
@@ -318,8 +316,6 @@ class AIPickUpViewModel @Inject constructor(
                         }
 
                         ProposalType.UNAVAILABLE -> {
-                            // Match the normal out-of-stock flow: update status and notification flags,
-                            // then notify the assigned store manager.
                             markItemUnavailableUseCase(
                                 orderId = orderId,
                                 orderItemId = orderItem.id,

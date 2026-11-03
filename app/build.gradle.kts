@@ -89,21 +89,22 @@ dependencies {
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     ksp(libs.hilt.compiler)
 
-    //Google Agent Development Kit
+    // Google ADK remains the complete Firebase fallback engine.
     implementation(libs.google.adk.kotlin.core.android)
     implementation(libs.google.adk.kotlin.firebase.android)
     ksp(libs.google.adk.kotlin.processor)
 
-    // LiteRT-LM runtime
-    implementation(libs.google.adk.kotlin.litertlm.android)
-    //implementation(libs.litertlm)
+    // Gemini Nano on-device agent and Android AppFunctions tool runtime.
+    implementation(libs.mlkit.genai.agent)
+    implementation(libs.mlkit.genai.prompt)
+    implementation(libs.androidx.appfunctions)
+    ksp(libs.androidx.appfunctions.compiler)
 
-    // Firebase AI Logic (cloud Gemini backend for ADK)
+    // Firebase AI Logic (cloud Gemini backend for ADK).
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.ai)
     implementation(libs.firebase.appcheck.debug)
 
-    //Serialization
+    // Serialization.
     implementation(libs.kotlinx.serialization.json)
-
 }

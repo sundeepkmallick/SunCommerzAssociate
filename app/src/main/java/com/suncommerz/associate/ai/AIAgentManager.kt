@@ -3,10 +3,9 @@ package com.suncommerz.associate.ai
 import com.google.adk.kt.agents.Instruction
 import com.google.adk.kt.agents.LlmAgent
 import com.google.adk.kt.annotations.Tool
-import com.suncommerz.associate.ai.provider.HybridModelProvider
+import com.suncommerz.associate.ai.provider.FirebaseModelProvider
 import com.suncommerz.associate.domain.repository.InventoryRepository
 import com.suncommerz.associate.domain.repository.OrderRepository
-import com.suncommerz.associate.domain.repository.ProductRepository
 import com.suncommerz.associate.domain.repository.StoreRepository
 import com.suncommerz.associate.domain.usecase.product.ObserveStoreProductsUseCase
 import com.suncommerz.associate.domain.usecase.product.GetSubstituteProductsUseCase
@@ -22,8 +21,7 @@ import javax.inject.Singleton
 class AIAgentManager @Inject constructor(
     private val orderRepository: OrderRepository,
     private val inventoryRepository: InventoryRepository,
-    private val productRepository: ProductRepository,
-    private val modelProvider: HybridModelProvider,
+    private val firebaseModelProvider: FirebaseModelProvider,
     private val storeRepository: StoreRepository,
     private val findNearbyStoresWithProductUseCase: FindNearbyStoresWithProductUseCase,
     private val observeStoreProductsUseCase: ObserveStoreProductsUseCase,
@@ -60,7 +58,7 @@ class AIAgentManager @Inject constructor(
             val storeInventory = inventoryRepository.observeInventory(storeId).first()
             val result = Json.encodeToString(storeInventory)
 
-            println("AI_TOOL: getProductStockInStore END: $result")
+            println("AI_TOOL: getStoreInventory END: $result")
 
             return result
         }
@@ -70,25 +68,23 @@ class AIAgentManager @Inject constructor(
 
         @Tool
         suspend fun findNearbyStores(
-            orderId: String,
             productId: String,
             currentStoreId: String,
             requestedQuantity: Int,
-            radius: Double
+            radiusMeters: Double
         ): String {
             println("AI_TOOL: findNearbyStores START")
 
             val currentStore = storeRepository
                 .getStore(currentStoreId)
                 .first()
-
-            println("AI_TOOL: currentStore loaded")
+                ?: return "[]"
 
             val nearbyStores = findNearbyStoresWithProductUseCase.invoke(
                 productId = productId,
-                currentStore = currentStore!!,
+                currentStore = currentStore,
                 quantity = requestedQuantity,
-                radiusMeters = radius
+                radiusMeters = radiusMeters
             )
 
             println("AI_TOOL: findNearbyStores END")
@@ -135,7 +131,7 @@ class AIAgentManager @Inject constructor(
         }
 
         @Tool
-        suspend fun pastOrderWithSubstitutionHistory(productId: String): String{
+        suspend fun pastOrderWithSubstitutionHistory(productId: String): String {
             println("AI_TOOL: pastOrderWithSubstitutionHistory START")
 
             val substitutionHistory = orderRepository.pastOrderWithSubstitutionHistory(productId).first()
@@ -146,89 +142,17 @@ class AIAgentManager @Inject constructor(
         }
     }
 
-
     suspend fun getRootOrchestratorAgent(): LlmAgent {
-
         rootOrchestratorAgent?.let { agent ->
             return agent
         }
 
-        val model = modelProvider.getModel()
-
+        val model = firebaseModelProvider.getModel()
         val agent = LlmAgent(
             name = "PickupOrchestrator",
             description = "Coordinates product pickup for customer orders.",
             model = model,
-            instruction = Instruction(
-                """
-                You are the Pickup Orchestrator for a retail store.
-
-                Your job is to determine how each requested order item
-                should be fulfilled.
-
-                For each product, follow this decision process:
-
-                1. Check the product's available stock at the current store.
-
-                2. If the available quantity is greater than or equal
-                   to the requested quantity:
-                   
-                   Return:
-                   PICKED
-                
-                3. If the product is not available then
-                   
-                   - Call getAvailableSubstitutes with the ordered product ID, current store ID, and requested quantity.
-                   - Only consider products returned by that tool; they are ranked by the app's substitution logic and have sufficient stock.
-                   - Prefer substitutes with:
-                       * Same category
-                       * Similar function/use case
-                       * Compatible ingredients
-                       * Similar size or quantity
-                       * Similar brand/type where appropriate
-                       * Similar price
-                   
-                   Return
-                   SUBSTITUTE(productId)
-                   
-                4. If the current store does not have enough stock and you didn't find
-                   substitute product or substitute product is also out of stock then:
-
-                   - Find nearby stores.
-                   - Check the product stock at the nearby stores.
-
-                5. If a nearby store has enough stock, then reserve the one that is
-                   nearest to the store:
-
-                   Return:
-                   RESERVE_NEARBY_STORE(storeId)
-
-                6. If the product cannot be obtained from the current store or nearby stores:
-
-                   Return:
-                   UNAVAILABLE
-
-                IMPORTANT:
-
-                - Never recommend the unavailable product itself.
-                - Never invent substitute IDs; only choose a product returned by getAvailableSubstitutes.
-                - Always use the tools to obtain real inventory information.
-                - Do not invent product IDs or store IDs.
-                - Do not assume a product is available without checking.
-                - Do not mark an item PICKED if sufficient stock does not exist.
-
-                Valid actions are:
-
-                PICKED
-                RESERVE_NEARBY_STORE(storeId)
-                SUBSTITUTE(productId)
-                UNAVAILABLE
-
-                Return only the action for each item.
-                Do not provide explanations unless specifically requested.
-                """.trimIndent()
-            ),
-
+            instruction = Instruction(PickupAgentInstructions.SYSTEM),
             tools = listOf(
                 InventoryTools().generatedTools(),
                 StoreTools().generatedTools(),
@@ -237,26 +161,6 @@ class AIAgentManager @Inject constructor(
         )
 
         rootOrchestratorAgent = agent
-
         return agent
     }
-
-
-    fun isUsingLocalModel(): Boolean {
-        return modelProvider.isLocalModelAvailable()
-    }
-
-    fun getCurrentBackend(): AIBackend {
-        return if (modelProvider.isLocalModelAvailable()) {
-            AIBackend.LOCAL
-        } else {
-            AIBackend.FIREBASE
-        }
-    }
 }
-
-enum class AIBackend {
-    LOCAL,
-    FIREBASE
-}
-

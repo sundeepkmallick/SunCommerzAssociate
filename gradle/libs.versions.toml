@@ -18,6 +18,9 @@ materialIconsExtendedAndroid = "1.7.8"
 navigationCompose = "2.10.0"
 adk = "1.0.0"
 googleServices = "4.5.0"
+mlkitGenaiAgent = "1.0.0-alpha1"
+mlkitGenaiPrompt = "1.0.0-beta5"
+appfunctions = "1.0.0-alpha13"
 
 [libraries]
 androidx-compose-material-icons-extended-android = { module = "androidx.compose.material:material-icons-extended-android", version.ref = "materialIconsExtendedAndroid" }
@@ -26,6 +29,10 @@ androidx-constraintlayout-compose-android = { module = "androidx.constraintlayou
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-hilt-lifecycle-viewmodel-compose = { module = "androidx.hilt:hilt-lifecycle-viewmodel-compose", version.ref = "hiltLifecycleViewmodelCompose" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
+androidx-appfunctions = { module = "androidx.appfunctions:appfunctions", version.ref = "appfunctions" }
+androidx-appfunctions-compiler = { module = "androidx.appfunctions:appfunctions-compiler", version.ref = "appfunctions" }
+mlkit-genai-agent = { module = "com.google.mlkit:genai-agent", version.ref = "mlkitGenaiAgent" }
+mlkit-genai-prompt = { module = "com.google.mlkit:genai-prompt", version.ref = "mlkitGenaiPrompt" }
 firebase-ai = { module = "com.google.firebase:firebase-ai" }
 firebase-appcheck-debug = { module = "com.google.firebase:firebase-appcheck-debug" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
@@ -44,12 +51,10 @@ androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "u
 google-adk-kotlin-core-android = { group = "com.google.adk", name = "google-adk-kotlin-core-android", version.ref = "adk" }
 google-adk-kotlin-processor = { group = "com.google.adk", name = "google-adk-kotlin-processor", version.ref = "adk" }
 google-adk-kotlin-firebase-android = { group = "com.google.adk", name = "google-adk-kotlin-firebase-android", version.ref = "adk" }
-google-adk-kotlin-litertlm-android = { group = "com.google.adk", name = "google-adk-kotlin-litertlm-android", version.ref = "adk" }
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
-
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -58,4 +63,3 @@ hilt = { id = "com.google.dagger.hilt.android", version.ref = "hiltAndroid" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-
