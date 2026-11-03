@@ -10,11 +10,16 @@ import com.google.adk.kt.sessions.InMemorySessionService
 import com.google.adk.kt.types.Content
 import com.google.adk.kt.types.Part
 import com.suncommerz.associate.ai.AIAgentManager
-import com.suncommerz.associate.domain.model.ItemPickupStatus
+import com.suncommerz.associate.domain.model.AssociateNotification
+import com.suncommerz.associate.domain.model.NotificationReasonType
 import com.suncommerz.associate.domain.model.OrderItem
 import com.suncommerz.associate.domain.model.StoreAssociate
 import com.suncommerz.associate.domain.model.StoreManager
 import com.suncommerz.associate.domain.repository.OrderRepository
+import com.suncommerz.associate.domain.usecase.notification.NotifyStoreManagerUseCase
+import com.suncommerz.associate.domain.usecase.orderitem.MarkItemPickedUseCase
+import com.suncommerz.associate.domain.usecase.orderitem.MarkItemUnavailableUseCase
+import com.suncommerz.associate.domain.usecase.orderitem.SelectSubstituteUseCase
 import com.suncommerz.associate.domain.usecase.orderitem.ReserveNearbyStoreUseCase
 import com.suncommerz.associate.domain.usecase.storemanager.ObserveStoreManagerUseCase
 import com.suncommerz.associate.domain.usecase.user.ObserveUserUseCase
@@ -29,6 +34,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
+import kotlin.time.Clock
 
 const val NEARBY_STORE_RADIUS = 3.00
 const val MIN_QUANTITY_TO_INDICATE_LOW = 2
@@ -40,7 +46,11 @@ class AIPickUpViewModel @Inject constructor(
     private val orderRepository: OrderRepository,
     private val observeUserUseCase: ObserveUserUseCase,
     private val observeStoreManagerUseCase: ObserveStoreManagerUseCase,
-    private val reserveNearbyStoreUseCase: ReserveNearbyStoreUseCase
+    private val reserveNearbyStoreUseCase: ReserveNearbyStoreUseCase,
+    private val markItemPickedUseCase: MarkItemPickedUseCase,
+    private val selectSubstituteUseCase: SelectSubstituteUseCase,
+    private val markItemUnavailableUseCase: MarkItemUnavailableUseCase,
+    private val notifyStoreManagerUseCase: NotifyStoreManagerUseCase
 ) : ViewModel() {
     private val orderId: String = checkNotNull(savedStateHandle["orderId"])
     private val assignedAssociateAndStoreManager =
@@ -309,6 +319,92 @@ class AIPickUpViewModel @Inject constructor(
                                 item = existingItem.copy(
                                     pickupStatus = ItemPickupStatus.UNAVAILABLE,
                                     pickedQuantity = 0
+                                )
+                            )
+                        }
+                    }
+                }
+
+                _uiState.value = currentState.copy(isUpdating = false)
+            } catch (e: Exception) {
+                _uiState.value = AIPickUpUiState.Error(
+                    message = "Failed to update order: ${e.message ?: "Unknown error"}",
+                    orderId = orderId
+                )
+            }
+        }
+    }
+    fun approveProposals() {
+        viewModelScope.launch {
+            val currentState = _uiState.value as? AIPickUpUiState.ProposalReady ?: return@launch
+            _uiState.value = currentState.copy(isUpdating = true)
+
+            try {
+                val order = orderRepository.observeOrder(orderId).first()
+                if (order == null) {
+                    _uiState.value = AIPickUpUiState.Error(
+                        message = "Order not found",
+                        orderId = orderId
+                    )
+                    return@launch
+                }
+
+                val (associate, manager) = assignedAssociateAndStoreManager
+                    .filterNotNull()
+                    .first()
+
+                currentState.proposals.forEach { proposal ->
+                    val orderItem = order.items.find { it.id == proposal.orderItemId }
+                        ?: throw IllegalStateException(
+                            "Order item ${proposal.orderItemId} no longer exists"
+                        )
+
+                    when (proposal.proposal) {
+                        ProposalType.PICKED -> {
+                            // Use the same domain operation as the standard order-item screen.
+                            markItemPickedUseCase(
+                                orderId = orderId,
+                                orderItemId = orderItem.id,
+                                pickedQuantity = orderItem.requestedQuantity
+                            )
+                        }
+
+                        ProposalType.SUBSTITUTE -> {
+                            selectSubstituteUseCase(
+                                orderId = orderId,
+                                orderItemId = orderItem.id,
+                                substituteProductId = proposal.detail,
+                                pickedQuantity = orderItem.requestedQuantity
+                            )
+                        }
+
+                        ProposalType.PICK_FROM_OTHER_STORE -> {
+                            reserveNearbyStoreUseCase(
+                                orderId = orderId,
+                                orderItemId = orderItem.id,
+                                nearbyStoreId = proposal.detail,
+                                pickedQuantity = orderItem.requestedQuantity
+                            )
+                        }
+
+                        ProposalType.UNAVAILABLE -> {
+                            // Match the normal out-of-stock flow: update status and notification flags,
+                            // then notify the assigned store manager.
+                            markItemUnavailableUseCase(
+                                orderId = orderId,
+                                orderItemId = orderItem.id,
+                                notifyManager = true,
+                                notifyCustomer = true
+                            )
+
+                            notifyStoreManagerUseCase(
+                                AssociateNotification(
+                                    notificationReasonType = NotificationReasonType.INVENTORY_ISSUE_OUT_OF_STOCK,
+                                    orderId = orderId,
+                                    productId = orderItem.product.id,
+                                    reportedByAssociateId = associate?.id.orEmpty(),
+                                    reportedToManagerId = manager?.id.orEmpty(),
+                                    reportDateTime = Clock.System.now()
                                 )
                             )
                         }
