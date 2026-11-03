@@ -33,7 +33,7 @@ import javax.inject.Inject
     serviceName = "PickupAppFunctionService",
     appFunctionXmlFileName = "pickup_app_functions",
 )
-abstract class PickupAppFunctionService : AppFunctionService() {
+abstract class BasePickupAppFunctionService : AppFunctionService() {
 
     @Inject lateinit var inventoryRepository: InventoryRepository
     @Inject lateinit var orderRepository: OrderRepository
