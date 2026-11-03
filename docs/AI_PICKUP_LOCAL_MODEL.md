@@ -22,6 +22,10 @@ For development, with the app installed and a device connected over ADB:
 adb push gemma-4-E2B-it.litertlm /sdcard/Android/data/com.suncommerz.associate/files/
 ```
 
-The dispatcher attempts LiteRT-LM only when the file exists and is at least 2 GB, the device is arm64, Android 8+, not classified as low-RAM, has at least 8 GB total RAM and 3 GB currently available, and has at least 512 MB free cache storage. If any check fails, it proceeds to Firebase.
+The dispatcher attempts LiteRT-LM only when the file exists and is at least 2 GB, the device is arm64, Android 8+, not classified as low-RAM, has at least 8 GB total RAM and 3 GB currently available, and has at least 512 MB free cache storage. These are conservative app-side admission checks, not official universal hardware guarantees. If any check fails, it proceeds to Firebase.
+
+## Build toolchain
+
+The current ADK Kotlin LiteRT-LM Android integration uses the LiteRT-LM 0.16.x runtime, whose Android/JVM artifacts require JDK 21 or newer to compile against. Use JDK 21 for Gradle builds.
 
 The model file is app-scoped and is not bundled in the APK. A production download/install UI should explicitly ask the associate for consent and preferably require unmetered Wi-Fi before downloading the 2.6 GB weights.
