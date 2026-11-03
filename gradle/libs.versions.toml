@@ -21,7 +21,7 @@ googleServices = "4.5.0"
 mlkitGenaiAgent = "1.0.0-alpha1"
 mlkitGenaiPrompt = "1.0.0-beta5"
 appfunctions = "1.0.0-alpha13"
-litertLm = "0.13.1"
+litertLm = "0.16.1"
 
 [libraries]
 androidx-compose-material-icons-extended-android = { module = "androidx.compose.material:material-icons-extended-android", version.ref = "materialIconsExtendedAndroid" }
