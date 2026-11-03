@@ -63,21 +63,14 @@ class AIPickUpViewModel @Inject constructor(
 
     init {
         getAssignedAssociateAndStoreManager()
-        viewModelScope.launch {
-            startAiPickup(orderId)
-        }
+        viewModelScope.launch { startAiPickup(orderId) }
     }
 
     private fun getAssignedAssociateAndStoreManager() {
         viewModelScope.launch {
-            combine(
-                observeUserUseCase(),
-                observeStoreManagerUseCase()
-            ) { user, manager ->
+            combine(observeUserUseCase(), observeStoreManagerUseCase()) { user, manager ->
                 user to manager
-            }.collect {
-                assignedAssociateAndStoreManager.value = it
-            }
+            }.collect { assignedAssociateAndStoreManager.value = it }
         }
     }
 
@@ -90,18 +83,10 @@ class AIPickUpViewModel @Inject constructor(
 
             try {
                 val (associate, _) = assignedAssociateAndStoreManager.filterNotNull().first()
-                val agent = aiAgentManager.getRootOrchestratorAgent()
-                val runner = InMemoryRunner(
-                    agent = agent,
-                    sessionService = InMemorySessionService()
-                )
                 val order = orderRepository.observeOrder(orderId).first()
 
                 if (order == null) {
-                    _uiState.value = AIPickUpUiState.Error(
-                        message = "Order not found",
-                        orderId = orderId
-                    )
+                    _uiState.value = AIPickUpUiState.Error("Order not found", orderId)
                     return@launch
                 }
 
@@ -111,18 +96,19 @@ class AIPickUpViewModel @Inject constructor(
                     return@launch
                 }
 
+                // Firebase is initialized only if both on-device backends fail or are unavailable.
+                val firebaseSessionService = InMemorySessionService()
+                var firebaseRunner: InMemoryRunner? = null
                 val proposals = mutableListOf<AIPickUpItemProposal>()
 
                 items.forEachIndexed { index, item ->
                     _uiState.update { state ->
-                        val status = "Analyzing item ${index + 1}/${items.size}: ${item.product.name}..."
+                        val status = "Analyzing item " + (index + 1) + "/" + items.size +
+                            ": " + item.product.name + "..."
                         if (state is AIPickUpUiState.Processing) {
                             state.copy(currentStatus = status, processedItems = proposals.toList())
                         } else {
-                            AIPickUpUiState.Processing(
-                                currentStatus = status,
-                                processedItems = proposals.toList()
-                            )
+                            AIPickUpUiState.Processing(status, proposals.toList())
                         }
                     }
 
@@ -140,39 +126,43 @@ class AIPickUpViewModel @Inject constructor(
                         Return exactly one valid pickup action.
                     """.trimIndent()
 
-                    val sessionId = "pickup_${orderId}_${item.id}"
-                    val response = hybridPickupAgentManager.runPickupItem(prompt) {
+                    val sessionId = "pickup_" + orderId + "_" + item.id
+                    val response = hybridPickupAgentManager.runPickupItem(
+                        prompt = prompt,
+                        userId = associate?.id.orEmpty(),
+                        sessionId = sessionId,
+                    ) {
+                        val activeRunner = firebaseRunner ?: InMemoryRunner(
+                            agent = aiAgentManager.getRootOrchestratorAgent(),
+                            sessionService = firebaseSessionService
+                        ).also { firebaseRunner = it }
+
                         runFirebaseAgent(
-                            runner = runner,
+                            runner = activeRunner,
                             userId = associate?.id.orEmpty(),
                             sessionId = sessionId,
-                            prompt = Content(
-                                role = "user",
-                                parts = listOf(Part(text = prompt))
-                            )
+                            prompt = Content(role = "user", parts = listOf(Part(text = prompt)))
                         )
                     }
 
                     Log.d(
                         "AI_PICKUP_DEBUG",
-                        "Completed item ${item.product.id} using ${hybridPickupAgentManager.getCurrentBackend()}"
+                        "Completed item " + item.product.id + " using " +
+                            hybridPickupAgentManager.getCurrentBackend()
                     )
-                    val proposal = parseAgentResponse(item = item, response = response)
-                    proposals.add(proposal)
+                    proposals.add(parseAgentResponse(item, response))
 
                     _uiState.update { state ->
                         if (state is AIPickUpUiState.Processing) {
                             state.copy(
-                                currentStatus = "Completed ${index + 1}/${items.size}",
+                                currentStatus = "Completed " + (index + 1) + "/" + items.size,
                                 processedItems = proposals.toList()
                             )
-                        } else {
-                            state
-                        }
+                        } else state
                     }
                 }
 
-                _uiState.value = AIPickUpUiState.ProposalReady(proposals = proposals.toList())
+                _uiState.value = AIPickUpUiState.ProposalReady(proposals.toList())
             } catch (e: Exception) {
                 _uiState.value = AIPickUpUiState.Error(
                     message = e.message ?: "An unknown error occurred",
@@ -189,7 +179,6 @@ class AIPickUpViewModel @Inject constructor(
         prompt: Content
     ): String {
         val assistantTexts = mutableListOf<String>()
-
         runner.runAsync(
             userId = userId,
             sessionId = sessionId,
@@ -198,67 +187,38 @@ class AIPickUpViewModel @Inject constructor(
             stateDelta = emptyMap(),
             runConfig = RunConfig()
         ).collect { event ->
-            Log.d("AI_PICKUP_DEBUG", "Firebase AI Event: $event")
-
+            Log.d("AI_PICKUP_DEBUG", "Firebase AI Event: " + event)
             if (event.author == "PickupOrchestrator") {
-                event.content?.parts
-                    .orEmpty()
-                    .mapNotNull { part -> part.text?.takeIf(String::isNotBlank) }
+                event.content?.parts.orEmpty()
+                    .mapNotNull { it.text?.takeIf(String::isNotBlank) }
                     .forEach(assistantTexts::add)
             }
         }
-
         return assistantTexts.lastOrNull()
             ?: throw IllegalStateException("Firebase AI agent completed without an assistant text response")
     }
 
-    private fun parseAgentResponse(
-        item: OrderItem,
-        response: String
-    ): AIPickUpItemProposal {
+    private fun parseAgentResponse(item: OrderItem, response: String): AIPickUpItemProposal {
         val normalized = response.trim().uppercase()
-
         return when {
             normalized == "PICKED" -> AIPickUpItemProposal(
-                orderItemId = item.id,
-                productName = item.product.name,
-                proposal = ProposalType.PICKED,
-                detail = ""
+                item.id, item.product.name, ProposalType.PICKED, ""
             )
-
             normalized == "UNAVAILABLE" -> AIPickUpItemProposal(
-                orderItemId = item.id,
-                productName = item.product.name,
-                proposal = ProposalType.UNAVAILABLE,
-                detail = ""
+                item.id, item.product.name, ProposalType.UNAVAILABLE, ""
             )
-
             Regex("^RESERVE_NEARBY_STORE\\(([^()\\s]+)\\)$").matches(normalized) -> {
                 val storeId = Regex("^RESERVE_NEARBY_STORE\\(([^()\\s]+)\\)$")
-                    .matchEntire(normalized)!!
-                    .groupValues[1]
-                AIPickUpItemProposal(
-                    orderItemId = item.id,
-                    productName = item.product.name,
-                    proposal = ProposalType.PICK_FROM_OTHER_STORE,
-                    detail = storeId
-                )
+                    .matchEntire(normalized)!!.groupValues[1]
+                AIPickUpItemProposal(item.id, item.product.name, ProposalType.PICK_FROM_OTHER_STORE, storeId)
             }
-
             Regex("^SUBSTITUTE\\(([^()\\s]+)\\)$").matches(normalized) -> {
                 val productId = Regex("^SUBSTITUTE\\(([^()\\s]+)\\)$")
-                    .matchEntire(normalized)!!
-                    .groupValues[1]
-                AIPickUpItemProposal(
-                    orderItemId = item.id,
-                    productName = item.product.name,
-                    proposal = ProposalType.SUBSTITUTE,
-                    detail = productId
-                )
+                    .matchEntire(normalized)!!.groupValues[1]
+                AIPickUpItemProposal(item.id, item.product.name, ProposalType.SUBSTITUTE, productId)
             }
-
             else -> throw IllegalStateException(
-                "AI agent returned an invalid pickup action for ${item.product.name}: $response"
+                "AI agent returned an invalid pickup action for " + item.product.name + ": " + response
             )
         }
     }
@@ -267,54 +227,36 @@ class AIPickUpViewModel @Inject constructor(
         viewModelScope.launch {
             val currentState = _uiState.value as? AIPickUpUiState.ProposalReady ?: return@launch
             _uiState.value = currentState.copy(isUpdating = true)
-
             try {
                 val order = orderRepository.observeOrder(orderId).first()
                 if (order == null) {
-                    _uiState.value = AIPickUpUiState.Error(
-                        message = "Order not found",
-                        orderId = orderId
-                    )
+                    _uiState.value = AIPickUpUiState.Error("Order not found", orderId)
                     return@launch
                 }
 
-                val (associate, manager) = assignedAssociateAndStoreManager
-                    .filterNotNull()
-                    .first()
-
+                val (associate, manager) = assignedAssociateAndStoreManager.filterNotNull().first()
                 currentState.proposals.forEach { proposal ->
                     val orderItem = order.items.find { it.id == proposal.orderItemId }
-                        ?: throw IllegalStateException(
-                            "Order item ${proposal.orderItemId} no longer exists"
-                        )
+                        ?: throw IllegalStateException("Order item " + proposal.orderItemId + " no longer exists")
 
                     when (proposal.proposal) {
-                        ProposalType.PICKED -> {
-                            markItemPickedUseCase(
-                                orderId = orderId,
-                                orderItemId = orderItem.id,
-                                pickedQuantity = orderItem.requestedQuantity
-                            )
-                        }
-
-                        ProposalType.SUBSTITUTE -> {
-                            selectSubstituteUseCase(
-                                orderId = orderId,
-                                orderItemId = orderItem.id,
-                                substituteProductId = proposal.detail,
-                                pickedQuantity = orderItem.requestedQuantity
-                            )
-                        }
-
-                        ProposalType.PICK_FROM_OTHER_STORE -> {
-                            reserveNearbyStoreUseCase(
-                                orderId = orderId,
-                                orderItemId = orderItem.id,
-                                nearbyStoreId = proposal.detail,
-                                pickedQuantity = orderItem.requestedQuantity
-                            )
-                        }
-
+                        ProposalType.PICKED -> markItemPickedUseCase(
+                            orderId = orderId,
+                            orderItemId = orderItem.id,
+                            pickedQuantity = orderItem.requestedQuantity
+                        )
+                        ProposalType.SUBSTITUTE -> selectSubstituteUseCase(
+                            orderId = orderId,
+                            orderItemId = orderItem.id,
+                            substituteProductId = proposal.detail,
+                            pickedQuantity = orderItem.requestedQuantity
+                        )
+                        ProposalType.PICK_FROM_OTHER_STORE -> reserveNearbyStoreUseCase(
+                            orderId = orderId,
+                            orderItemId = orderItem.id,
+                            nearbyStoreId = proposal.detail,
+                            pickedQuantity = orderItem.requestedQuantity
+                        )
                         ProposalType.UNAVAILABLE -> {
                             markItemUnavailableUseCase(
                                 orderId = orderId,
@@ -322,7 +264,6 @@ class AIPickUpViewModel @Inject constructor(
                                 notifyManager = true,
                                 notifyCustomer = true
                             )
-
                             notifyStoreManagerUseCase(
                                 AssociateNotification(
                                     notificationReasonType = NotificationReasonType.INVENTORY_ISSUE_OUT_OF_STOCK,
@@ -336,12 +277,10 @@ class AIPickUpViewModel @Inject constructor(
                         }
                     }
                 }
-
-                _uiState.value = currentState.copy(isUpdating = false)
-                _uiState.value = currentState.copy(isApprovedAndOrderUpdated = true)
+                _uiState.value = currentState.copy(isUpdating = false, isApprovedAndOrderUpdated = true)
             } catch (e: Exception) {
                 _uiState.value = AIPickUpUiState.Error(
-                    message = "Failed to update order: ${e.message ?: "Unknown error"}",
+                    message = "Failed to update order: " + (e.message ?: "Unknown error"),
                     orderId = orderId
                 )
             }
