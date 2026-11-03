@@ -49,7 +49,7 @@ class GeminiNanoPickupAgent @Inject constructor(
                 .setMaxTurns(10)
                 .build()
 
-            runner = AgentRunner(context, agent, model)
+            runner = AgentRunner(context, agent)
             val invokedTools = mutableListOf<String>()
             var finalText: String? = null
 
