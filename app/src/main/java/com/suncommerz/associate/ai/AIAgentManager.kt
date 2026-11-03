@@ -9,6 +9,8 @@ import com.suncommerz.associate.domain.repository.OrderRepository
 import com.suncommerz.associate.domain.repository.ProductRepository
 import com.suncommerz.associate.domain.repository.StoreRepository
 import com.suncommerz.associate.domain.usecase.product.ObserveStoreProductsUseCase
+import com.suncommerz.associate.domain.usecase.product.GetSubstituteProductsUseCase
+import com.suncommerz.associate.domain.usecase.inventory.IsProductAvailableUseCase
 import com.suncommerz.associate.domain.usecase.store.FindNearbyStoresWithProductUseCase
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.encodeToString
@@ -24,7 +26,9 @@ class AIAgentManager @Inject constructor(
     private val modelProvider: HybridModelProvider,
     private val storeRepository: StoreRepository,
     private val findNearbyStoresWithProductUseCase: FindNearbyStoresWithProductUseCase,
-    private val observeStoreProductsUseCase: ObserveStoreProductsUseCase
+    private val observeStoreProductsUseCase: ObserveStoreProductsUseCase,
+    private val getSubstituteProductsUseCase: GetSubstituteProductsUseCase,
+    private val isProductAvailableUseCase: IsProductAvailableUseCase
 ) {
     private var rootOrchestratorAgent: LlmAgent? = null
 
@@ -96,6 +100,28 @@ class AIAgentManager @Inject constructor(
     inner class SubstitutionTools {
 
         @Tool
+        suspend fun getAvailableSubstitutes(
+            productId: String,
+            storeId: String,
+            requestedQuantity: Int
+        ): String {
+            require(requestedQuantity > 0) { "Requested quantity must be greater than zero" }
+
+            val candidates = getSubstituteProductsUseCase(productId).first()
+                .orEmpty()
+                .filterNotNull()
+                .filter { candidate ->
+                    isProductAvailableUseCase(
+                        productId = candidate.id,
+                        storeId = storeId,
+                        quantity = requestedQuantity
+                    )
+                }
+
+            return Json.encodeToString(candidates)
+        }
+
+        @Tool
         suspend fun observeStoreProductsUseCase(
             storeId: String
         ): String {
@@ -152,7 +178,8 @@ class AIAgentManager @Inject constructor(
                 
                 3. If the product is not available then
                    
-                   - Search for suitable substitute products.
+                   - Call getAvailableSubstitutes with the ordered product ID, current store ID, and requested quantity.
+                   - Only consider products returned by that tool; they are ranked by the app's substitution logic and have sufficient stock.
                    - Prefer substitutes with:
                        * Same category
                        * Similar function/use case
@@ -184,6 +211,7 @@ class AIAgentManager @Inject constructor(
                 IMPORTANT:
 
                 - Never recommend the unavailable product itself.
+                - Never invent substitute IDs; only choose a product returned by getAvailableSubstitutes.
                 - Always use the tools to obtain real inventory information.
                 - Do not invent product IDs or store IDs.
                 - Do not assume a product is available without checking.
