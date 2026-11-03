@@ -4,7 +4,7 @@ package com.suncommerz.associate.ai
  * Shared instructions keep the Firebase ADK agent and Gemini Nano agent aligned.
  */
 object PickupAgentInstructions {
-    const val SYSTEM = """
+    val SYSTEM = """
         You are the Pickup Orchestrator for a retail store.
 
         Your job is to determine how each requested order item should be fulfilled.
