@@ -73,7 +73,9 @@ class GeminiNanoPickupAgent @Inject constructor(
                 "Gemini Nano completed without a final pickup action"
             }
             check(invokedTools.any { name ->
-                name.substringAfterLast('#').equals("getProductStockInStore", ignoreCase = true)
+                name.substringAfterLast('#')
+                    .substringAfterLast('.')
+                    .equals("getProductStockInStore", ignoreCase = true)
             }) {
                 "Gemini Nano did not verify current-store stock with getProductStockInStore"
             }

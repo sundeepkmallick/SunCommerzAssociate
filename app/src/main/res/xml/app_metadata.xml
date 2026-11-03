@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AppFunctionAppMetadata
+    xmlns:appfn="http://schemas.android.com/apk/androidx.appfunctions"
+    appfn:instructions="These functions support the associate's AI pickup workflow. First verify requested-product stock at the current store with getProductStockInStore. Use getAvailableSubstitutes only for the current store and requested quantity. Use findNearbyStores to discover alternate stores, then verify each candidate store's stock with getProductStockInStore. The inventory and order-history functions are read-only. Never make or approve order changes; the associate reviews and approves the final pickup proposals in the app." />
