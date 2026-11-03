@@ -88,8 +88,8 @@ The project currently configures compileSdk and targetSdk as 37. Use the SDK ver
 
 Retail customers place orders online for pickup at a store. Associates prepare orders by picking requested items. If an item is unavailable, the workflow can consider a substitute or another store, while inventory issues can be reported for follow-up. The app supports store operations while keeping associates in control of fulfillment decisions.
 
-## Licensing
+## Licensing and attribution
 
-The original code in this repository is offered under the [MIT License](LICENSE).
+Original project code authored by Sundeep K. Mallick is licensed under the [Apache License, Version 2.0](LICENSE).
 
-Third-party libraries, Android/Google services, and AI models/services have their own terms and licenses. This repository's MIT license does not relicense those dependencies, Google services, or model weights. Review their respective terms before redistribution or use.
+See [NOTICE](NOTICE) for project attribution and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the current inventory of third-party SDKs and libraries. Third-party components, Google/Firebase services, and AI models retain their own licenses and terms; this project's license does not relicense them.
