@@ -9,7 +9,8 @@ sealed class AIPickUpUiState {
     ) : AIPickUpUiState()
     data class ProposalReady(
         val proposals: List<AIPickUpItemProposal>,
-        val isUpdating: Boolean = false
+        val isUpdating: Boolean = false,
+        val isApprovedAndOrderUpdated: Boolean = false
     ) : AIPickUpUiState()
 }
 

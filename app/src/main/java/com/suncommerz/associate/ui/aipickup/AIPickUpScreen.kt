@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -42,7 +43,9 @@ fun AIPickUpScreen(
 @Composable
 fun AIPickUpProcessingContent(state: AIPickUpUiState.Processing, onBackPressed: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -58,35 +61,84 @@ fun AIPickUpProcessingContent(state: AIPickUpUiState.Processing, onBackPressed: 
 
 @Composable
 fun AIPickUpProposalContent(state: AIPickUpUiState.ProposalReady, viewModel: AIPickUpViewModel, onBackPressed: () -> Unit) {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text(text = "AI Pickup Proposal", style = MaterialTheme.typography.headlineMedium)
-        Spacer(modifier = Modifier.height(16.dp))
+    val snackbarHostState = remember { SnackbarHostState() }
 
-        LazyColumn(modifier = Modifier.weight(1f)) {
-            items(state.proposals) { proposal ->
-                ProposalItem(proposal)
+    Scaffold(
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    actionColor = MaterialTheme.colorScheme.inversePrimary
+                )
             }
         }
+    ) { paddingValues ->
 
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        if (state.isUpdating) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-        } else {
-            Button(
-                onClick = { viewModel.approveProposals() },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = "Approve & Update Order")
-            }
-        }
-        
-        TextButton(
-            onClick = onBackPressed,
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !state.isUpdating
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp)
         ) {
-            Text(text = "Back")
+            Text(
+                text = "AI Pickup Proposal",
+                style = MaterialTheme.typography.headlineMedium
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            LazyColumn(modifier = Modifier.weight(1f)) {
+                items(state.proposals) { proposal ->
+                    ProposalItem(proposal)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (state.isUpdating) {
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else {
+                Button(
+                    onClick = { viewModel.approveProposals() },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.isApprovedAndOrderUpdated
+                ) {
+                    Text(stringResource(R.string.button_approve_ai_proposal_and_update_order))
+                }
+            }
+
+            TextButton(
+                onClick = onBackPressed,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !state.isUpdating
+            ) {
+                Text(stringResource(R.string.button_back))
+            }
+        }
+    }
+
+    val messageAiPickupProposalApprovedAndOrderUpdated = stringResource(R.string.ai_pickup_proposal_approved_and_order_updated)
+    val snackBarActionText = stringResource(R.string.snackbar_action_okay)
+    LaunchedEffect(state.isApprovedAndOrderUpdated) {
+        if (state.isApprovedAndOrderUpdated) {
+            val result = snackbarHostState.showSnackbar(
+                message = messageAiPickupProposalApprovedAndOrderUpdated,
+                actionLabel = snackBarActionText,
+                withDismissAction = true,
+                duration = SnackbarDuration.Long
+            )
+
+            when (result) {
+                SnackbarResult.ActionPerformed -> {
+                    onBackPressed()
+                }
+
+                SnackbarResult.Dismissed -> {
+                    //no action
+                }
+            }
         }
     }
 }
@@ -94,7 +146,9 @@ fun AIPickUpProposalContent(state: AIPickUpUiState.ProposalReady, viewModel: AIP
 @Composable
 fun ProposalItem(proposal: AIPickUpItemProposal) {
     Card(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -114,17 +168,19 @@ fun ProposalItem(proposal: AIPickUpItemProposal) {
 @Composable
 fun AIPickUpErrorContent(state: AIPickUpUiState.Error, onRetry: () -> Unit, onBackPressed: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(text = state.message, color = MaterialTheme.colorScheme.error)
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = onRetry) {
-            Text(text = "Retry")
+            Text(text = stringResource(R.string.text_button_retry))
         }
         TextButton(onClick = onBackPressed) {
-            Text(text = "Back")
+            Text(text =  stringResource(R.string.text_button_button))
         }
     }
 }

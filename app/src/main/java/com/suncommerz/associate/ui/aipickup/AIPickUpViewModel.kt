@@ -11,6 +11,7 @@ import com.google.adk.kt.types.Content
 import com.google.adk.kt.types.Part
 import com.suncommerz.associate.ai.AIAgentManager
 import com.suncommerz.associate.domain.model.AssociateNotification
+import com.suncommerz.associate.domain.model.ItemPickupStatus
 import com.suncommerz.associate.domain.model.NotificationReasonType
 import com.suncommerz.associate.domain.model.OrderItem
 import com.suncommerz.associate.domain.model.StoreAssociate
@@ -278,77 +279,6 @@ class AIPickUpViewModel @Inject constructor(
                     return@launch
                 }
 
-                currentState.proposals.forEach { proposal ->
-                    val existingItem = order.items.find { it.id == proposal.orderItemId }
-                        ?: return@forEach
-
-                    when (proposal.proposal) {
-                        ProposalType.PICKED -> {
-                            orderRepository.updateOrderItem(
-                                orderId = orderId,
-                                item = existingItem.copy(
-                                    pickupStatus = ItemPickupStatus.PICKED,
-                                    pickedQuantity = existingItem.requestedQuantity
-                                )
-                            )
-                        }
-
-                        ProposalType.SUBSTITUTE -> {
-                            orderRepository.updateOrderItem(
-                                orderId = orderId,
-                                item = existingItem.copy(
-                                    pickupStatus = ItemPickupStatus.SUBSTITUTE,
-                                    pickedQuantity = existingItem.requestedQuantity,
-                                    selectedSubstituteId = proposal.detail
-                                )
-                            )
-                        }
-
-                        ProposalType.PICK_FROM_OTHER_STORE -> {
-                            reserveNearbyStoreUseCase(
-                                orderId = orderId,
-                                orderItemId = existingItem.id,
-                                nearbyStoreId = proposal.detail,
-                                pickedQuantity = existingItem.requestedQuantity
-                            )
-                        }
-
-                        ProposalType.UNAVAILABLE -> {
-                            orderRepository.updateOrderItem(
-                                orderId = orderId,
-                                item = existingItem.copy(
-                                    pickupStatus = ItemPickupStatus.UNAVAILABLE,
-                                    pickedQuantity = 0
-                                )
-                            )
-                        }
-                    }
-                }
-
-                _uiState.value = currentState.copy(isUpdating = false)
-            } catch (e: Exception) {
-                _uiState.value = AIPickUpUiState.Error(
-                    message = "Failed to update order: ${e.message ?: "Unknown error"}",
-                    orderId = orderId
-                )
-            }
-        }
-    }
-    fun approveProposals() {
-        viewModelScope.launch {
-            val currentState = _uiState.value as? AIPickUpUiState.ProposalReady ?: return@launch
-            _uiState.value = currentState.copy(isUpdating = true)
-
-            try {
-                val order = orderRepository.observeOrder(orderId).first()
-                if (order == null) {
-                    _uiState.value = AIPickUpUiState.Error(
-                        message = "Order not found",
-                        orderId = orderId
-                    )
-                    return@launch
-                }
-
                 val (associate, manager) = assignedAssociateAndStoreManager
                     .filterNotNull()
                     .first()
@@ -412,6 +342,7 @@ class AIPickUpViewModel @Inject constructor(
                 }
 
                 _uiState.value = currentState.copy(isUpdating = false)
+                _uiState.value = currentState.copy(isApprovedAndOrderUpdated = true)
             } catch (e: Exception) {
                 _uiState.value = AIPickUpUiState.Error(
                     message = "Failed to update order: ${e.message ?: "Unknown error"}",
