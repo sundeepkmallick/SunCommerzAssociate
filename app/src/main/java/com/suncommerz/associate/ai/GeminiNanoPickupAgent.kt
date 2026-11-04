@@ -13,11 +13,6 @@ import kotlinx.coroutines.flow.collect
 import javax.inject.Inject
 import javax.inject.Singleton
 
-data class OnDevicePickupResult(
-    val text: String,
-    val invokedTools: List<String>,
-)
-
 /**
  * Runs the complete pickup reasoning and tool-calling loop with Gemini Nano.
  * AICore owns model provisioning; this app only checks whether the feature is
@@ -26,7 +21,7 @@ data class OnDevicePickupResult(
 @Singleton
 class GeminiNanoPickupAgent @Inject constructor(
     @ApplicationContext private val context: Context,
-) {
+) : PickupAgent {
     suspend fun availabilityStatus(): String {
         if (Build.VERSION.SDK_INT < 36) return "ANDROID_VERSION_UNSUPPORTED"
         val model = Generation.getClient()
@@ -40,7 +35,7 @@ class GeminiNanoPickupAgent @Inject constructor(
     suspend fun isAvailable(): Boolean =
         availabilityStatus() == FeatureStatus.AVAILABLE.toString()
 
-    suspend fun run(prompt: String): OnDevicePickupResult {
+    override suspend fun run(prompt: String, userId: String, sessionId: String): String {
         check(isAvailable()) {
             "Gemini Nano is not currently available on this device"
         }
@@ -85,7 +80,7 @@ class GeminiNanoPickupAgent @Inject constructor(
                 "Gemini Nano did not verify current-store stock with getProductStockInStore"
             }
 
-            return OnDevicePickupResult(response.trim(), invokedTools)
+            return response.trim()
         } finally {
             runner?.close()
             model.close()
