@@ -12,18 +12,18 @@ enum class AIBackend {
 }
 
 /**
- * Selects the pickup agent in priority order: Gemini Nano, ADK + LiteRT-LM,
- * then Firebase ADK. All local tools are read-only; order mutations remain
- * behind the associate approval flow.
+ * Runs only the associate's preferred backend. If that backend is not usable,
+ * Firebase ADK is the safe fallback. Model management is intentionally kept
+ * outside the AI Pickup screen and workflow.
  */
 @Singleton
 class HybridPickupAgentManager @Inject constructor(
     private val geminiNanoPickupAgent: GeminiNanoPickupAgent,
     private val liteRtLmPickupAgent: LiteRtLmPickupAgent,
+    private val preferencesStore: AIModelPreferencesStore,
 ) {
-    @Volatile private var nanoDisabledForProcess = false
-    @Volatile private var liteRtDisabledForProcess = false
-    @Volatile private var activeBackend: AIBackend = AIBackend.FIREBASE
+    @Volatile
+    private var activeBackend: AIBackend = AIBackend.FIREBASE
 
     suspend fun runPickupItem(
         prompt: String,
@@ -31,40 +31,42 @@ class HybridPickupAgentManager @Inject constructor(
         sessionId: String,
         firebaseFallback: suspend () -> String,
     ): String {
-        if (!nanoDisabledForProcess) {
-            try {
-                val result = geminiNanoPickupAgent.run(prompt)
-                check(isValidPickupAction(result.text)) {
-                    "Gemini Nano returned an unsupported pickup action: " + result.text
+        when (preferencesStore.getPreferredBackend()) {
+            AIBackend.GEMINI_NANO -> {
+                try {
+                    val result = geminiNanoPickupAgent.run(prompt)
+                    check(isValidPickupAction(result.text)) {
+                        "Gemini Nano returned an unsupported pickup action: " + result.text
+                    }
+                    activeBackend = AIBackend.GEMINI_NANO
+                    Log.i(TAG, "AI Pickup used the preferred Gemini Nano backend")
+                    return result.text
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Throwable) {
+                    if (error is ThreadDeath) throw error
+                    Log.w(TAG, "Preferred Gemini Nano backend unavailable; falling back to Firebase ADK", error)
                 }
-                activeBackend = AIBackend.GEMINI_NANO
-                Log.i(TAG, "AI Pickup selected Gemini Nano; tools=" + result.invokedTools)
-                return result.text
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (error: Throwable) {
-                if (error is ThreadDeath) throw error
-                nanoDisabledForProcess = true
-                Log.w(TAG, "Gemini Nano unavailable or failed; trying LiteRT-LM", error)
             }
-        }
 
-        if (!liteRtDisabledForProcess) {
-            try {
-                val response = liteRtLmPickupAgent.run(prompt, userId, sessionId)
-                check(isValidPickupAction(response)) {
-                    "LiteRT-LM returned an unsupported pickup action: " + response
+            AIBackend.LITERT_LM -> {
+                try {
+                    val response = liteRtLmPickupAgent.run(prompt, userId, sessionId)
+                    check(isValidPickupAction(response)) {
+                        "LiteRT-LM returned an unsupported pickup action: " + response
+                    }
+                    activeBackend = AIBackend.LITERT_LM
+                    Log.i(TAG, "AI Pickup used the preferred LiteRT-LM backend")
+                    return response
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Throwable) {
+                    if (error is ThreadDeath) throw error
+                    Log.w(TAG, "Preferred LiteRT-LM backend unavailable; falling back to Firebase ADK", error)
                 }
-                activeBackend = AIBackend.LITERT_LM
-                Log.i(TAG, "AI Pickup selected ADK + LiteRT-LM")
-                return response
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (error: Throwable) {
-                if (error is ThreadDeath) throw error
-                liteRtDisabledForProcess = true
-                Log.w(TAG, "ADK + LiteRT-LM unavailable or failed; falling back to Firebase", error)
             }
+
+            AIBackend.FIREBASE -> Unit
         }
 
         activeBackend = AIBackend.FIREBASE
@@ -72,6 +74,8 @@ class HybridPickupAgentManager @Inject constructor(
     }
 
     fun getCurrentBackend(): AIBackend = activeBackend
+
+    fun getPreferredBackend(): AIBackend = preferencesStore.getPreferredBackend()
 
     fun isUsingLocalModel(): Boolean =
         activeBackend == AIBackend.GEMINI_NANO || activeBackend == AIBackend.LITERT_LM

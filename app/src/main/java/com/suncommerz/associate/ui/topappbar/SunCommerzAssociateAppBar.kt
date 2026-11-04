@@ -2,6 +2,7 @@ package com.suncommerz.associate.ui.topappbar
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -21,22 +22,31 @@ import com.suncommerz.associate.ui.navigation.SunCommerzAssociateScreen
 fun SunCommerzAssociateAppBar(
     currentScreen: SunCommerzAssociateScreen,
     canNavigateBack: Boolean,
-    navigateUp: () -> Unit
+    navigateUp: () -> Unit,
+    onSettingsClick: () -> Unit = {},
 ) {
     TopAppBar(
         modifier = Modifier,
-        title = { Text(text = stringResource(currentScreen.title))},
+        title = { Text(text = stringResource(currentScreen.title)) },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer
         ),
         navigationIcon = {
             if (canNavigateBack) {
-                IconButton(
-                    onClick = navigateUp
-                ) {
+                IconButton(onClick = navigateUp) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = stringResource(R.string.back_button)
+                    )
+                }
+            }
+        },
+        actions = {
+            if (currentScreen != SunCommerzAssociateScreen.AIModelPreferences) {
+                IconButton(onClick = onSettingsClick) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = stringResource(R.string.open_ai_model_preferences)
                     )
                 }
             }
@@ -50,6 +60,6 @@ fun SunCommerzAssociateAppBarPreview() {
     SunCommerzAssociateAppBar(
         currentScreen = SunCommerzAssociateScreen.Order,
         canNavigateBack = true,
-        {}
+        navigateUp = {},
     )
 }

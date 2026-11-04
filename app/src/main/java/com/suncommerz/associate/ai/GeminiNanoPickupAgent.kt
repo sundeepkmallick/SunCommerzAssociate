@@ -20,28 +20,35 @@ data class OnDevicePickupResult(
 
 /**
  * Runs the complete pickup reasoning and tool-calling loop with Gemini Nano.
- *
- * The API requires an eligible AICore device and Android AppFunctions support.
- * The model is considered usable only when it is already AVAILABLE; this class
- * deliberately does not download a model onto the device.
+ * AICore owns model provisioning; this app only checks whether the feature is
+ * already available and never initiates a Gemini Nano model download.
  */
 @Singleton
 class GeminiNanoPickupAgent @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
+    suspend fun availabilityStatus(): String {
+        if (Build.VERSION.SDK_INT < 36) return "ANDROID_VERSION_UNSUPPORTED"
+        val model = Generation.getClient()
+        return try {
+            model.checkStatus().toString()
+        } finally {
+            model.close()
+        }
+    }
+
+    suspend fun isAvailable(): Boolean =
+        availabilityStatus() == FeatureStatus.AVAILABLE.toString()
+
     suspend fun run(prompt: String): OnDevicePickupResult {
-        check(Build.VERSION.SDK_INT >= 36) {
-            "Gemini Nano AppFunction agent requires Android 16 or later"
+        check(isAvailable()) {
+            "Gemini Nano is not currently available on this device"
         }
 
         val model = Generation.getClient()
         var runner: AgentRunner? = null
 
         try {
-            check(model.checkStatus() == FeatureStatus.AVAILABLE) {
-                "Gemini Nano is not currently available on this device"
-            }
-
             val agent = Agent.builder()
                 .setName("PickupOrchestrator")
                 .setInstructions(PickupAgentInstructions.SYSTEM)
@@ -61,9 +68,7 @@ class GeminiNanoPickupAgent @Inject constructor(
                 when (event) {
                     is AgentEvent.FunctionCall -> invokedTools += event.name
                     is AgentEvent.TextMessage -> {
-                        if (!event.isPartial) {
-                            finalText = event.text
-                        }
+                        if (!event.isPartial) finalText = event.text
                     }
                     else -> Unit
                 }
@@ -80,13 +85,9 @@ class GeminiNanoPickupAgent @Inject constructor(
                 "Gemini Nano did not verify current-store stock with getProductStockInStore"
             }
 
-            return OnDevicePickupResult(
-                text = response.trim(),
-                invokedTools = invokedTools,
-            )
+            return OnDevicePickupResult(response.trim(), invokedTools)
         } finally {
             runner?.close()
-            // GenerativeModel.close() is safe to call more than once.
             model.close()
         }
     }

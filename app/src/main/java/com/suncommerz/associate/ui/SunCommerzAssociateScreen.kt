@@ -21,23 +21,9 @@ fun SunCommerzAssociateScreen(windowSize: WindowWidthSizeClass) {
     val route = backStackEntry?.destination?.route ?: SunCommerzAssociateScreen.Start.name
     val currentScreen = SunCommerzAssociateScreen.valueOf(route.substringBefore('/'))
 
-    val contentType: UiContentType
-    when(windowSize) {
-        WindowWidthSizeClass.Compact -> {
-            contentType = UiContentType.LIST_ONLY
-        }
-
-        WindowWidthSizeClass.Medium -> {
-            contentType = UiContentType.LIST_ONLY
-        }
-
-        WindowWidthSizeClass.Expanded -> {
-            contentType = UiContentType.LIST_AND_DETAIL
-        }
-
-        else -> {
-            contentType = UiContentType.LIST_ONLY
-        }
+    val contentType = when (windowSize) {
+        WindowWidthSizeClass.Expanded -> UiContentType.LIST_AND_DETAIL
+        else -> UiContentType.LIST_ONLY
     }
 
     Scaffold(
@@ -45,7 +31,14 @@ fun SunCommerzAssociateScreen(windowSize: WindowWidthSizeClass) {
             SunCommerzAssociateAppBar(
                 currentScreen = currentScreen,
                 canNavigateBack = navController.previousBackStackEntry != null,
-                navigateUp = { navController.navigateUp() }
+                navigateUp = { navController.navigateUp() },
+                onSettingsClick = {
+                    if (currentScreen != SunCommerzAssociateScreen.AIModelPreferences) {
+                        navController.navigate(SunCommerzAssociateScreen.AIModelPreferences.name) {
+                            launchSingleTop = true
+                        }
+                    }
+                },
             )
         }
     ) { innerPadding ->
