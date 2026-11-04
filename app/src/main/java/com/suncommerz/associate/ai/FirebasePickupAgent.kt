@@ -5,6 +5,7 @@ import com.google.adk.kt.runners.InMemoryRunner
 import com.google.adk.kt.sessions.InMemorySessionService
 import com.google.adk.kt.types.Content
 import com.google.adk.kt.types.Part
+import com.suncommerz.associate.ai.provider.FirebaseModelProvider
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.UUID
@@ -15,6 +16,7 @@ import javax.inject.Singleton
 @Singleton
 class FirebasePickupAgent @Inject constructor(
     private val pickupAdkAgentFactory: PickupAdkAgentFactory,
+    private val firebaseModelProvider: FirebaseModelProvider,
 ) : PickupAgent {
     private val runnerMutex = Mutex()
     private val sessionService = InMemorySessionService()
@@ -46,7 +48,7 @@ class FirebasePickupAgent @Inject constructor(
         return runnerMutex.withLock {
             runner?.let { return@withLock it }
             InMemoryRunner(
-                agent = pickupAdkAgentFactory.getFirebasePickupAgent(),
+                agent = pickupAdkAgentFactory.createPickupAgent(firebaseModelProvider.getModel()),
                 appName = "SunCommerzAssociatePickup",
                 sessionService = sessionService,
             ).also { runner = it }
