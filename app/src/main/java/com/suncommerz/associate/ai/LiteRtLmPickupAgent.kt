@@ -11,6 +11,7 @@ import com.google.adk.kt.types.Content
 import com.google.adk.kt.types.Part
 import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.EngineConfig
+import com.suncommerz.associate.ai.download.LiteRtLmModelDownloadManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
@@ -25,14 +26,14 @@ import javax.inject.Singleton
 /**
  * ADK + LiteRT-LM execution for Gemma 4 E2B IT.
  *
- * The 2.6 GB model is not downloaded silently. Install the documented .litertlm
- * file first; absent weights, unsupported devices, low memory, and native runtime
- * initialization failures allow the dispatcher to continue to Firebase.
+ * Model installation is managed by AI Model Preferences. The runtime refuses
+ * to load any file that the download manager has not size/hash-verified.
  */
 @Singleton
 class LiteRtLmPickupAgent @Inject constructor(
     @ApplicationContext private val context: Context,
     private val aiAgentManager: AIAgentManager,
+    private val modelDownloadManager: LiteRtLmModelDownloadManager,
 ) {
     private val initializationMutex = Mutex()
 
@@ -82,6 +83,9 @@ class LiteRtLmPickupAgent @Inject constructor(
             runner?.let { return@withLock it }
 
             ensureDeviceCanRunModel()
+            check(modelDownloadManager.isInstalled()) {
+                "Gemma 4 E2B is not installed and verified. Open AI Model Preferences to install it."
+            }
             val modelFile = findModelFile()
             val localModel = LiteRtLmModel.create(
                 EngineConfig(
@@ -139,19 +143,15 @@ class LiteRtLmPickupAgent @Inject constructor(
 
     private fun findModelFile(): File {
         val externalDirectory = context.getExternalFilesDir(null) ?: context.filesDir
-        val candidates = listOf(
-            File(externalDirectory, MODEL_FILE_NAME),
-            File(context.filesDir, "models/$MODEL_FILE_NAME"),
-        )
-        return candidates.firstOrNull { it.isFile && it.length() >= MIN_MODEL_BYTES }
-            ?: throw IllegalStateException(
-                "Gemma 4 E2B model is not installed. Expected $MODEL_FILE_NAME in " +
-                    externalDirectory.absolutePath
-            )
+        val modelFile = File(externalDirectory, MODEL_FILE_NAME)
+        check(modelFile.isFile && modelFile.length() == MODEL_SIZE_BYTES) {
+            "The verified Gemma 4 E2B model file is missing or has an unexpected size."
+        }
+        return modelFile
     }
 
     private companion object {
         const val MODEL_FILE_NAME = "gemma-4-E2B-it.litertlm"
-        const val MIN_MODEL_BYTES = 2_000_000_000L
+        const val MODEL_SIZE_BYTES = 2_588_147_712L
     }
 }
