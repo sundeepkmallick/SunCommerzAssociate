@@ -1,5 +1,6 @@
 package com.suncommerz.associate.ai
 
+import com.google.adk.kt.agents.LlmAgent
 import com.google.adk.kt.agents.RunConfig
 import com.google.adk.kt.runners.InMemoryRunner
 import com.google.adk.kt.sessions.InMemorySessionService
@@ -19,14 +20,22 @@ class FirebasePickupAgent @Inject constructor(
     private val pickupAdkAgentFactory: PickupAdkAgentFactory,
     private val firebaseModelProvider: FirebaseModelProvider,
 ) : PickupAgent {
-    private val runnerMutex = Mutex()
-    private val sessionService = InMemorySessionService()
-    @Volatile private var runner: InMemoryRunner? = null
+    private val agentMutex = Mutex()
+
+    @Volatile
+    private var agent: LlmAgent? = null
 
     override suspend fun run(prompt: String, userId: String, sessionId: String): String {
-        val activeRunner = getOrCreateRunner()
+        // Use a fresh runner/session service per request so a retry cannot inherit
+        // conversation history from a previous processing attempt for the same item.
+        val runner = InMemoryRunner(
+            agent = getOrCreateAgent(),
+            appName = "SunCommerzAssociatePickup",
+            sessionService = InMemorySessionService(),
+        )
         val assistantTexts = mutableListOf<String>()
-        activeRunner.runAsync(
+
+        runner.runAsync(
             userId = userId,
             sessionId = sessionId,
             invocationId = UUID.randomUUID().toString(),
@@ -40,19 +49,17 @@ class FirebasePickupAgent @Inject constructor(
                     .forEach(assistantTexts::add)
             }
         }
+
         return assistantTexts.lastOrNull()?.trim()?.takeIf(String::isNotBlank)
             ?: throw IllegalStateException("Firebase pickup agent completed without an assistant response")
     }
 
-    private suspend fun getOrCreateRunner(): InMemoryRunner {
-        runner?.let { return it }
-        return runnerMutex.withLock {
-            runner?.let { return@withLock it }
-            InMemoryRunner(
-                agent = pickupAdkAgentFactory.createPickupAgent(firebaseModelProvider.getModel()),
-                appName = "SunCommerzAssociatePickup",
-                sessionService = sessionService,
-            ).also { runner = it }
+    private suspend fun getOrCreateAgent(): LlmAgent {
+        agent?.let { return it }
+        return agentMutex.withLock {
+            agent?.let { return@withLock it }
+            pickupAdkAgentFactory.createPickupAgent(firebaseModelProvider.getModel())
+                .also { agent = it }
         }
     }
 }
