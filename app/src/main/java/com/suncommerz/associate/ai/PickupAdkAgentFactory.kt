@@ -4,7 +4,6 @@ import com.google.adk.kt.agents.Instruction
 import com.google.adk.kt.agents.LlmAgent
 import com.google.adk.kt.annotations.Tool
 import com.google.adk.kt.models.Model
-import com.suncommerz.associate.ai.provider.FirebaseModelProvider
 import com.suncommerz.associate.domain.repository.InventoryRepository
 import com.suncommerz.associate.domain.repository.OrderRepository
 import com.suncommerz.associate.domain.repository.StoreRepository
@@ -22,7 +21,6 @@ import javax.inject.Singleton
 class PickupAdkAgentFactory @Inject constructor(
     private val orderRepository: OrderRepository,
     private val inventoryRepository: InventoryRepository,
-    private val firebaseModelProvider: FirebaseModelProvider,
     private val storeRepository: StoreRepository,
     private val findNearbyStoresWithProductUseCase: FindNearbyStoresWithProductUseCase,
     private val observeStoreProductsUseCase: ObserveStoreProductsUseCase,
@@ -118,6 +116,4 @@ class PickupAdkAgentFactory @Inject constructor(
         ).flatten()
     )
 
-    /** Creates a Firebase-backed ADK agent using the shared pickup tools and instructions. */
-    fun getFirebasePickupAgent(): LlmAgent = createPickupAgent(firebaseModelProvider.getModel())
 }
