@@ -14,6 +14,8 @@ import com.suncommerz.associate.ai.HybridPickupAgentManager
 import com.suncommerz.associate.domain.model.AssociateNotification
 import com.suncommerz.associate.domain.model.NotificationReasonType
 import com.suncommerz.associate.domain.model.OrderItem
+import com.suncommerz.associate.domain.model.ItemPickupStatus
+import com.suncommerz.associate.domain.model.OrderStatus
 import com.suncommerz.associate.domain.model.StoreAssociate
 import com.suncommerz.associate.domain.model.StoreManager
 import com.suncommerz.associate.domain.model.Store
@@ -237,7 +239,7 @@ class AIPickUpViewModel @Inject constructor(
         val substitutes = options.substitutesInCurrentStore.orEmpty()
         if (substitutes.isNotEmpty()) {
             val selected = substitutes.firstOrNull {
-                it.id == modelProposal?.detail && modelProposal.proposal == ProposalType.SUBSTITUTE
+                modelProposal?.let { proposal -> proposal.detail == it.id && proposal.proposal == ProposalType.SUBSTITUTE } == true
             } ?: substitutes.first()
             return AIPickUpItemProposal(
                 item.id, item.product.name, ProposalType.SUBSTITUTE, selected.id
@@ -247,7 +249,7 @@ class AIPickUpViewModel @Inject constructor(
         val nearbyStores = options.originalProductNearbyStores.orEmpty()
         if (nearbyStores.isNotEmpty()) {
             val selected = nearbyStores.firstOrNull {
-                it.id == modelProposal?.detail && modelProposal.proposal == ProposalType.PICK_FROM_OTHER_STORE
+                modelProposal?.let { proposal -> proposal.detail == it.id && proposal.proposal == ProposalType.PICK_FROM_OTHER_STORE } == true
             } ?: nearbyStores.first()
             return AIPickUpItemProposal(
                 item.id, item.product.name, ProposalType.PICK_FROM_OTHER_STORE, selected.id
@@ -325,7 +327,8 @@ class AIPickUpViewModel @Inject constructor(
                                 orderItemId = orderItem.id,
                                 pickedQuantity = orderItem.requestedQuantity
                             )
-                            if (currentQuantity in 1 until MIN_QUANTITY_TO_INDICATE_LOW) {
+                            val remainingQuantity = currentQuantity - orderItem.requestedQuantity
+                            if (remainingQuantity < MIN_QUANTITY_TO_INDICATE_LOW) {
                                 markItemStockLowUseCase(orderId, orderItem.id, notifyManager = true)
                                 notifyStoreManagerUseCase(
                                     AssociateNotification(
@@ -386,6 +389,26 @@ class AIPickUpViewModel @Inject constructor(
                         }
                     }
                 }
+                // Mirror the manual Order Details status transition after every item update.
+                val updatedOrder = orderRepository.observeOrder(orderId).first()
+                    ?: throw IllegalStateException("Order not found after applying pickup proposals")
+                val updatedStatuses = updatedOrder.items.map { it.pickupStatus }
+                val orderStatus = when {
+                    updatedStatuses.any { it == ItemPickupStatus.UNAVAILABLE } -> OrderStatus.INCOMPLETE
+                    updatedStatuses.all {
+                        it == ItemPickupStatus.PICKED ||
+                            it == ItemPickupStatus.SUBSTITUTE ||
+                            it == ItemPickupStatus.RESERVED_NEARBY_STORE
+                    } -> OrderStatus.READY
+                    updatedStatuses.any {
+                        it == ItemPickupStatus.PICKED || it == ItemPickupStatus.PENDING
+                    } -> OrderStatus.PICKING
+                    else -> updatedOrder.status
+                }
+                if (orderStatus != updatedOrder.status) {
+                    orderRepository.updateOrderStatus(orderId, orderStatus)
+                }
+
                 _uiState.value = currentState.copy(isUpdating = false, isApprovedAndOrderUpdated = true)
             } catch (e: Exception) {
                 _uiState.value = AIPickUpUiState.Error(
