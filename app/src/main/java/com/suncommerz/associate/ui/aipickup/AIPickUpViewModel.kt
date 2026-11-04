@@ -16,9 +16,13 @@ import com.suncommerz.associate.domain.model.NotificationReasonType
 import com.suncommerz.associate.domain.model.OrderItem
 import com.suncommerz.associate.domain.model.StoreAssociate
 import com.suncommerz.associate.domain.model.StoreManager
+import com.suncommerz.associate.domain.model.Store
 import com.suncommerz.associate.domain.repository.OrderRepository
 import com.suncommerz.associate.domain.usecase.notification.NotifyStoreManagerUseCase
+import com.suncommerz.associate.domain.usecase.fullfilment.FindFulfillmentOptionsUseCase
+import com.suncommerz.associate.domain.usecase.inventory.GetProductAvailabilityUseCase
 import com.suncommerz.associate.domain.usecase.orderitem.MarkItemPickedUseCase
+import com.suncommerz.associate.domain.usecase.orderitem.MarkItemStockLowUseCase
 import com.suncommerz.associate.domain.usecase.orderitem.MarkItemUnavailableUseCase
 import com.suncommerz.associate.domain.usecase.orderitem.SelectSubstituteUseCase
 import com.suncommerz.associate.domain.usecase.orderitem.ReserveNearbyStoreUseCase
@@ -37,7 +41,7 @@ import java.util.UUID
 import javax.inject.Inject
 import kotlin.time.Clock
 
-const val NEARBY_STORE_RADIUS = 3.00
+const val NEARBY_STORE_RADIUS = 3_000.0
 const val MIN_QUANTITY_TO_INDICATE_LOW = 2
 
 @HiltViewModel
@@ -46,10 +50,13 @@ class AIPickUpViewModel @Inject constructor(
     private val aiAgentManager: AIAgentManager,
     private val hybridPickupAgentManager: HybridPickupAgentManager,
     private val orderRepository: OrderRepository,
+    private val getProductAvailabilityUseCase: GetProductAvailabilityUseCase,
+    private val findFulfillmentOptionsUseCase: FindFulfillmentOptionsUseCase,
     private val observeUserUseCase: ObserveUserUseCase,
     private val observeStoreManagerUseCase: ObserveStoreManagerUseCase,
     private val reserveNearbyStoreUseCase: ReserveNearbyStoreUseCase,
     private val markItemPickedUseCase: MarkItemPickedUseCase,
+    private val markItemStockLowUseCase: MarkItemStockLowUseCase,
     private val selectSubstituteUseCase: SelectSubstituteUseCase,
     private val markItemUnavailableUseCase: MarkItemUnavailableUseCase,
     private val notifyStoreManagerUseCase: NotifyStoreManagerUseCase
@@ -150,7 +157,7 @@ class AIPickUpViewModel @Inject constructor(
                         "Completed item " + item.product.id + " using " +
                             hybridPickupAgentManager.getCurrentBackend()
                     )
-                    proposals.add(parseAgentResponse(item, response))
+                    proposals.add(validateAgentResponse(item, order.store, response))
 
                     _uiState.update { state ->
                         if (state is AIPickUpUiState.Processing) {
@@ -198,6 +205,60 @@ class AIPickUpViewModel @Inject constructor(
             ?: throw IllegalStateException("Firebase AI agent completed without an assistant text response")
     }
 
+    /**
+     * The model may suggest an action, but the manual fulfilment use case is the
+     * source of truth. Re-check live inventory and only expose options that the
+     * existing manual pickup flow would offer.
+     */
+    private suspend fun validateAgentResponse(
+        item: OrderItem,
+        currentStore: Store,
+        response: String
+    ): AIPickUpItemProposal {
+        val localQuantity = getProductAvailabilityUseCase(
+            productId = item.product.id,
+            storeId = currentStore.id
+        )
+        if (localQuantity >= item.requestedQuantity) {
+            return AIPickUpItemProposal(
+                item.id, item.product.name, ProposalType.PICKED, ""
+            )
+        }
+
+        val options = findFulfillmentOptionsUseCase(
+            product = item.product,
+            currentStore = currentStore,
+            quantity = item.requestedQuantity,
+            radiusMeters = NEARBY_STORE_RADIUS
+        )
+        val modelProposal = runCatching { parseAgentResponse(item, response) }.getOrNull()
+
+        // Match the manual UI's priority: in-store substitutes before nearby stores.
+        val substitutes = options.substitutesInCurrentStore.orEmpty()
+        if (substitutes.isNotEmpty()) {
+            val selected = substitutes.firstOrNull {
+                it.id == modelProposal?.detail && modelProposal.proposal == ProposalType.SUBSTITUTE
+            } ?: substitutes.first()
+            return AIPickUpItemProposal(
+                item.id, item.product.name, ProposalType.SUBSTITUTE, selected.id
+            )
+        }
+
+        val nearbyStores = options.originalProductNearbyStores.orEmpty()
+        if (nearbyStores.isNotEmpty()) {
+            val selected = nearbyStores.firstOrNull {
+                it.id == modelProposal?.detail && modelProposal.proposal == ProposalType.PICK_FROM_OTHER_STORE
+            } ?: nearbyStores.first()
+            return AIPickUpItemProposal(
+                item.id, item.product.name, ProposalType.PICK_FROM_OTHER_STORE, selected.id
+            )
+        }
+
+        return AIPickUpItemProposal(
+            item.id, item.product.name, ProposalType.UNAVAILABLE, ""
+        )
+    }
+
     private fun parseAgentResponse(item: OrderItem, response: String): AIPickUpItemProposal {
         val normalized = response.trim().uppercase()
         return when {
@@ -239,25 +300,73 @@ class AIPickUpViewModel @Inject constructor(
                     val orderItem = order.items.find { it.id == proposal.orderItemId }
                         ?: throw IllegalStateException("Order item " + proposal.orderItemId + " no longer exists")
 
+                    val currentQuantity = getProductAvailabilityUseCase(
+                        productId = orderItem.product.id,
+                        storeId = order.store.id
+                    )
+                    val currentOptions = if (currentQuantity < orderItem.requestedQuantity) {
+                        findFulfillmentOptionsUseCase(
+                            product = orderItem.product,
+                            currentStore = order.store,
+                            quantity = orderItem.requestedQuantity,
+                            radiusMeters = NEARBY_STORE_RADIUS
+                        )
+                    } else null
+
+                    // Inventory can change between proposal generation and associate approval.
+                    // Reject stale proposals instead of recording an invalid pickup/reservation.
                     when (proposal.proposal) {
-                        ProposalType.PICKED -> markItemPickedUseCase(
-                            orderId = orderId,
-                            orderItemId = orderItem.id,
-                            pickedQuantity = orderItem.requestedQuantity
-                        )
-                        ProposalType.SUBSTITUTE -> selectSubstituteUseCase(
-                            orderId = orderId,
-                            orderItemId = orderItem.id,
-                            substituteProductId = proposal.detail,
-                            pickedQuantity = orderItem.requestedQuantity
-                        )
-                        ProposalType.PICK_FROM_OTHER_STORE -> reserveNearbyStoreUseCase(
-                            orderId = orderId,
-                            orderItemId = orderItem.id,
-                            nearbyStoreId = proposal.detail,
-                            pickedQuantity = orderItem.requestedQuantity
-                        )
+                        ProposalType.PICKED -> {
+                            check(currentQuantity >= orderItem.requestedQuantity) {
+                                "Stock changed for " + orderItem.product.name + ". Run AI Pickup again."
+                            }
+                            markItemPickedUseCase(
+                                orderId = orderId,
+                                orderItemId = orderItem.id,
+                                pickedQuantity = orderItem.requestedQuantity
+                            )
+                            if (currentQuantity in 1 until MIN_QUANTITY_TO_INDICATE_LOW) {
+                                markItemStockLowUseCase(orderId, orderItem.id, notifyManager = true)
+                                notifyStoreManagerUseCase(
+                                    AssociateNotification(
+                                        notificationReasonType = NotificationReasonType.INVENTORY_ISSUE_LOW_STOCK,
+                                        orderId = orderId,
+                                        productId = orderItem.product.id,
+                                        reportedByAssociateId = associate?.id.orEmpty(),
+                                        reportedToManagerId = manager?.id.orEmpty(),
+                                        reportDateTime = Clock.System.now()
+                                    )
+                                )
+                            }
+                        }
+                        ProposalType.SUBSTITUTE -> {
+                            check(currentOptions?.substitutesInCurrentStore.orEmpty().any { it.id == proposal.detail }) {
+                                "The selected substitute is no longer available for " + orderItem.product.name + ". Run AI Pickup again."
+                            }
+                            selectSubstituteUseCase(
+                                orderId = orderId,
+                                orderItemId = orderItem.id,
+                                substituteProductId = proposal.detail,
+                                pickedQuantity = orderItem.requestedQuantity
+                            )
+                        }
+                        ProposalType.PICK_FROM_OTHER_STORE -> {
+                            check(currentOptions?.originalProductNearbyStores.orEmpty().any { it.id == proposal.detail }) {
+                                "The selected nearby store no longer has enough stock for " + orderItem.product.name + ". Run AI Pickup again."
+                            }
+                            reserveNearbyStoreUseCase(
+                                orderId = orderId,
+                                orderItemId = orderItem.id,
+                                nearbyStoreId = proposal.detail,
+                                pickedQuantity = orderItem.requestedQuantity
+                            )
+                        }
                         ProposalType.UNAVAILABLE -> {
+                            check(currentQuantity < orderItem.requestedQuantity &&
+                                currentOptions?.substitutesInCurrentStore.isNullOrEmpty() &&
+                                currentOptions?.originalProductNearbyStores.isNullOrEmpty()) {
+                                "Fulfilment options changed for " + orderItem.product.name + ". Run AI Pickup again."
+                            }
                             markItemUnavailableUseCase(
                                 orderId = orderId,
                                 orderItemId = orderItem.id,
