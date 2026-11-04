@@ -327,20 +327,6 @@ class AIPickUpViewModel @Inject constructor(
                                 orderItemId = orderItem.id,
                                 pickedQuantity = orderItem.requestedQuantity
                             )
-                            val remainingQuantity = currentQuantity - orderItem.requestedQuantity
-                            if (remainingQuantity < MIN_QUANTITY_TO_INDICATE_LOW) {
-                                markItemStockLowUseCase(orderId, orderItem.id, notifyManager = true)
-                                notifyStoreManagerUseCase(
-                                    AssociateNotification(
-                                        notificationReasonType = NotificationReasonType.INVENTORY_ISSUE_LOW_STOCK,
-                                        orderId = orderId,
-                                        productId = orderItem.product.id,
-                                        reportedByAssociateId = associate?.id.orEmpty(),
-                                        reportedToManagerId = manager?.id.orEmpty(),
-                                        reportDateTime = Clock.System.now()
-                                    )
-                                )
-                            }
                         }
                         ProposalType.SUBSTITUTE -> {
                             check(currentOptions?.substitutesInCurrentStore.orEmpty().any { it.id == proposal.detail }) {
@@ -379,6 +365,31 @@ class AIPickUpViewModel @Inject constructor(
                             notifyStoreManagerUseCase(
                                 AssociateNotification(
                                     notificationReasonType = NotificationReasonType.INVENTORY_ISSUE_OUT_OF_STOCK,
+                                    orderId = orderId,
+                                    productId = orderItem.product.id,
+                                    reportedByAssociateId = associate?.id.orEmpty(),
+                                    reportedToManagerId = manager?.id.orEmpty(),
+                                    reportDateTime = Clock.System.now()
+                                )
+                            )
+                        }
+                    }
+
+                    // Alert the manager when this action leaves the current shelf empty
+                    // or below the existing low-stock threshold. For a picked item,
+                    // account for the quantity just removed; for a substitute/transfer,
+                    // the original item remains at its current-store quantity.
+                    if (proposal.proposal != ProposalType.UNAVAILABLE) {
+                        val remainingLocalQuantity = if (proposal.proposal == ProposalType.PICKED) {
+                            currentQuantity - orderItem.requestedQuantity
+                        } else {
+                            currentQuantity
+                        }
+                        if (remainingLocalQuantity < MIN_QUANTITY_TO_INDICATE_LOW) {
+                            markItemStockLowUseCase(orderId, orderItem.id, notifyManager = true)
+                            notifyStoreManagerUseCase(
+                                AssociateNotification(
+                                    notificationReasonType = NotificationReasonType.INVENTORY_ISSUE_LOW_STOCK,
                                     orderId = orderId,
                                     productId = orderItem.product.id,
                                     reportedByAssociateId = associate?.id.orEmpty(),
