@@ -4,12 +4,6 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.adk.kt.agents.RunConfig
-import com.google.adk.kt.runners.InMemoryRunner
-import com.google.adk.kt.sessions.InMemorySessionService
-import com.google.adk.kt.types.Content
-import com.google.adk.kt.types.Part
-import com.suncommerz.associate.ai.AIAgentManager
 import com.suncommerz.associate.ai.HybridPickupAgentManager
 import com.suncommerz.associate.domain.model.AssociateNotification
 import com.suncommerz.associate.domain.model.NotificationReasonType
@@ -49,7 +43,6 @@ const val MIN_QUANTITY_TO_INDICATE_LOW = 2
 @HiltViewModel
 class AIPickUpViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val aiAgentManager: AIAgentManager,
     private val hybridPickupAgentManager: HybridPickupAgentManager,
     private val orderRepository: OrderRepository,
     private val getProductAvailabilityUseCase: GetProductAvailabilityUseCase,
@@ -105,9 +98,6 @@ class AIPickUpViewModel @Inject constructor(
                     return@launch
                 }
 
-                // Firebase is initialized only if both on-device backends fail or are unavailable.
-                val firebaseSessionService = InMemorySessionService()
-                var firebaseRunner: InMemoryRunner? = null
                 val proposals = mutableListOf<AIPickUpItemProposal>()
 
                 items.forEachIndexed { index, item ->
@@ -140,19 +130,7 @@ class AIPickUpViewModel @Inject constructor(
                         prompt = prompt,
                         userId = associate?.id.orEmpty(),
                         sessionId = sessionId,
-                    ) {
-                        val activeRunner = firebaseRunner ?: InMemoryRunner(
-                            agent = aiAgentManager.getRootOrchestratorAgent(),
-                            sessionService = firebaseSessionService
-                        ).also { firebaseRunner = it }
-
-                        runFirebaseAgent(
-                            runner = activeRunner,
-                            userId = associate?.id.orEmpty(),
-                            sessionId = sessionId,
-                            prompt = Content(role = "user", parts = listOf(Part(text = prompt)))
-                        )
-                    }
+                    )
 
                     Log.d(
                         "AI_PICKUP_DEBUG",
@@ -179,32 +157,6 @@ class AIPickUpViewModel @Inject constructor(
                 )
             }
         }
-    }
-
-    private suspend fun runFirebaseAgent(
-        runner: InMemoryRunner,
-        userId: String,
-        sessionId: String,
-        prompt: Content
-    ): String {
-        val assistantTexts = mutableListOf<String>()
-        runner.runAsync(
-            userId = userId,
-            sessionId = sessionId,
-            invocationId = UUID.randomUUID().toString(),
-            newMessage = prompt,
-            stateDelta = emptyMap(),
-            runConfig = RunConfig()
-        ).collect { event ->
-            Log.d("AI_PICKUP_DEBUG", "Firebase AI Event: " + event)
-            if (event.author == "PickupOrchestrator") {
-                event.content?.parts.orEmpty()
-                    .mapNotNull { it.text?.takeIf(String::isNotBlank) }
-                    .forEach(assistantTexts::add)
-            }
-        }
-        return assistantTexts.lastOrNull()
-            ?: throw IllegalStateException("Firebase AI agent completed without an assistant text response")
     }
 
     /**
