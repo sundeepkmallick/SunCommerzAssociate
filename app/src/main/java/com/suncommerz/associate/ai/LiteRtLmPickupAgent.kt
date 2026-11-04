@@ -32,9 +32,9 @@ import javax.inject.Singleton
 @Singleton
 class LiteRtLmPickupAgent @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val aiAgentManager: AIAgentManager,
+    private val pickupAdkAgentFactory: PickupAdkAgentFactory,
     private val modelDownloadManager: LiteRtLmModelDownloadManager,
-) {
+) : PickupAgent {
     private val initializationMutex = Mutex()
 
     @Volatile
@@ -43,7 +43,7 @@ class LiteRtLmPickupAgent @Inject constructor(
     @Volatile
     private var model: LiteRtLmModel? = null
 
-    suspend fun run(prompt: String, userId: String, sessionId: String): String =
+    override suspend fun run(prompt: String, userId: String, sessionId: String): String =
         withContext(Dispatchers.IO) {
             val activeRunner = getOrCreateRunner()
             val assistantTexts = mutableListOf<String>()
@@ -99,7 +99,7 @@ class LiteRtLmPickupAgent @Inject constructor(
             try {
                 localModel.engine.initialize()
                 val localRunner = InMemoryRunner(
-                    agent = aiAgentManager.createPickupAgent(localModel),
+                    agent = pickupAdkAgentFactory.createPickupAgent(localModel),
                     appName = "SunCommerzAssociatePickup",
                     sessionService = InMemorySessionService(),
                 )
