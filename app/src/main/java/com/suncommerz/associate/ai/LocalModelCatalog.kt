@@ -16,6 +16,11 @@ data class LocalModelDefinition(
     val minimumLiteRtLmVersion: String,
     val downloadable: Boolean,
     val pickupAgentValidated: Boolean,
+    val minimumAndroidApi: Int?,
+    val requiresArm64: Boolean?,
+    val minimumTotalRamBytes: Long?,
+    val minimumAvailableRamBytes: Long?,
+    val minimumRuntimeCacheBytes: Long?,
     val availabilityNote: String,
 )
 
@@ -35,6 +40,11 @@ object LocalModelCatalog {
             minimumLiteRtLmVersion = "0.13.1",
             downloadable = true,
             pickupAgentValidated = true,
+            minimumAndroidApi = 26,
+            requiresArm64 = true,
+            minimumTotalRamBytes = 8L * 1024L * 1024L * 1024L,
+            minimumAvailableRamBytes = 3L * 1024L * 1024L * 1024L,
+            minimumRuntimeCacheBytes = 512L * 1024L * 1024L,
             availabilityNote = "Available for this app's current LiteRT-LM and ADK dependency set.",
         ),
         LocalModelDefinition(
@@ -49,6 +59,11 @@ object LocalModelCatalog {
             minimumLiteRtLmVersion = "0.18.0",
             downloadable = false,
             pickupAgentValidated = false,
+            minimumAndroidApi = null,
+            requiresArm64 = null,
+            minimumTotalRamBytes = null,
+            minimumAvailableRamBytes = null,
+            minimumRuntimeCacheBytes = null,
             availabilityNote = "Not enabled: its published artifact requires LiteRT-LM 0.18.0+, while this app is pinned to 0.13.1 for ADK compatibility. Pickup tool calling is also not yet validated.",
         ),
     )
