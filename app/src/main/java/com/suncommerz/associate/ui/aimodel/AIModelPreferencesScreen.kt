@@ -200,9 +200,6 @@ private fun LocalModelCard(
                 Text(model.description, style = MaterialTheme.typography.bodySmall)
                 Text("Approx. ${model.approximateSizeMb} MB", style = MaterialTheme.typography.labelMedium)
                 Text("LiteRT-LM: ${model.minimumLiteRtLmVersion ?: "Exact minimum version not verified"}", style = MaterialTheme.typography.bodySmall)
-                Text("Runtime: ${model.runtimeCompatibilityNote}", style = MaterialTheme.typography.bodySmall)
-                Text("Device: ${model.deviceCompatibilityNote}", style = MaterialTheme.typography.bodySmall)
-                Text("License: ${model.licenseNote}", style = MaterialTheme.typography.bodySmall)
                 Text(
                     if (installed) "Installed and verified"
                     else if (!model.downloadable) "Listed · download not enabled"
