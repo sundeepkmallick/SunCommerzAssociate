@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.suncommerz.associate.ai.AIBackend
+import com.suncommerz.associate.ai.LocalModelDefinition
 import com.suncommerz.associate.ai.download.ModelDownloadStatus
 
 @Composable
@@ -39,15 +40,12 @@ fun AIModelPreferencesScreen(
 
     Scaffold { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(padding)
+                .verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
-                "Choose which AI backend AI Pickup should prefer. If it is unavailable or fails to start, the app safely uses Firebase ADK.",
+                "Choose which AI backend AI Pickup should prefer. If an on-device backend is unavailable or fails, the app falls back to Firebase ADK.",
                 style = MaterialTheme.typography.bodyMedium,
             )
 
@@ -73,43 +71,47 @@ fun AIModelPreferencesScreen(
                 onSelect = { viewModel.selectBackend(AIBackend.GEMINI_NANO) },
             )
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+            Text("LiteRT-LM local models", style = MaterialTheme.typography.titleLarge)
+            Text(
+                "Only one local model is installed at a time. Choose a model below; downloading a different supported model replaces the current one after verification.",
+                style = MaterialTheme.typography.bodySmall,
+            )
+
+            state.localModels.forEach { model ->
+                LocalModelCard(
+                    model = model,
+                    selected = state.selectedLocalModelId == model.id,
+                    installed = state.installedLocalModelId == model.id,
+                    download = if (state.selectedLocalModelId == model.id) state.download.status else null,
+                    onSelect = { viewModel.selectLocalModel(model.id) },
+                )
+            }
+
+            val selectedModel = state.localModels.firstOrNull { it.id == state.selectedLocalModelId }
+            if (selectedModel != null && selectedModel.downloadable) {
+                if (state.download.status == ModelDownloadStatus.INSTALLED &&
+                    state.installedLocalModelId == selectedModel.id
                 ) {
-                    Text("Gemma 4 E2B IT (LiteRT-LM)", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        "Optional on-device model managed by this app. Download size is approximately 2.59 GB. The model is verified before it can be selected.",
-                        style = MaterialTheme.typography.bodyMedium,
+                    BackendPreferenceCard(
+                        title = "Use ${selectedModel.displayName}",
+                        description = "Prefer this installed local model for AI Pickup.",
+                        selected = state.preferredBackend == AIBackend.LITERT_LM,
+                        enabled = true,
+                        status = "Installed and verified",
+                        onSelect = { viewModel.selectBackend(AIBackend.LITERT_LM) },
                     )
-
-                    when (state.download.status) {
-                        ModelDownloadStatus.INSTALLED -> Text(
-                            "Installed and verified",
-                            color = MaterialTheme.colorScheme.primary,
-                            style = MaterialTheme.typography.labelLarge,
-                        )
-                        ModelDownloadStatus.QUEUED -> Text("Download queued")
-                        ModelDownloadStatus.DOWNLOADING -> Text("Downloading…")
-                        ModelDownloadStatus.PAUSED -> Text("Waiting for an allowed network")
-                        ModelDownloadStatus.VERIFYING -> Text("Verifying model…")
-                        ModelDownloadStatus.FAILED -> Text(
-                            state.download.message ?: "Download failed",
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                        ModelDownloadStatus.NOT_INSTALLED -> Text("Not installed")
-                    }
-
+                    OutlinedButton(
+                        onClick = viewModel::removeModel,
+                        enabled = !state.isBusy,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Remove downloaded model") }
+                } else {
                     if (state.download.status == ModelDownloadStatus.DOWNLOADING ||
                         state.download.status == ModelDownloadStatus.QUEUED ||
                         state.download.status == ModelDownloadStatus.PAUSED
                     ) {
                         LinearProgressIndicator(
-                            progress = state.download.progressPercent / 100f,
+                            progress = { state.download.progressPercent / 100f },
                             modifier = Modifier.fillMaxWidth(),
                         )
                         Text(
@@ -117,79 +119,102 @@ fun AIModelPreferencesScreen(
                                 "${formatGiB(state.download.downloadedBytes)} / ${formatGiB(state.download.totalBytes)}",
                             style = MaterialTheme.typography.bodySmall,
                         )
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Allow mobile data", style = MaterialTheme.typography.bodyMedium)
-                            Text(
-                                "Off by default; downloads use Wi-Fi/unmetered networks.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Switch(
-                            checked = state.mobileDataAllowed,
-                            onCheckedChange = viewModel::setMobileDataAllowed,
-                            enabled = state.download.status != ModelDownloadStatus.DOWNLOADING &&
-                                state.download.status != ModelDownloadStatus.QUEUED &&
-                                state.download.status != ModelDownloadStatus.PAUSED,
-                        )
-                    }
-
-                    if (state.download.status == ModelDownloadStatus.INSTALLED) {
-                        BackendPreferenceCard(
-                            title = "Use LiteRT-LM",
-                            description = "Prefer this installed local model for AI Pickup.",
-                            selected = state.preferredBackend == AIBackend.LITERT_LM,
-                            enabled = true,
-                            status = "Ready to select",
-                            onSelect = { viewModel.selectBackend(AIBackend.LITERT_LM) },
-                        )
                         OutlinedButton(
-                            onClick = viewModel::removeModel,
+                            onClick = viewModel::cancelDownload,
+                            enabled = !state.isBusy,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text("Cancel download") }
+                    } else {
+                        Button(
+                            onClick = { viewModel.downloadModel(selectedModel.id) },
                             enabled = !state.isBusy,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            Text("Remove downloaded model")
-                        }
-                    } else {
-                        Button(
-                            onClick = viewModel::downloadModel,
-                            enabled = !state.isBusy &&
-                                state.download.status != ModelDownloadStatus.DOWNLOADING &&
-                                state.download.status != ModelDownloadStatus.QUEUED &&
-                                state.download.status != ModelDownloadStatus.PAUSED,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(if (state.download.status == ModelDownloadStatus.FAILED) "Retry download" else "Download model")
-                        }
-
-                        if (state.download.status == ModelDownloadStatus.DOWNLOADING ||
-                            state.download.status == ModelDownloadStatus.QUEUED ||
-                            state.download.status == ModelDownloadStatus.PAUSED
-                        ) {
-                            OutlinedButton(
-                                onClick = viewModel::cancelDownload,
-                                enabled = !state.isBusy,
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text("Cancel download")
-                            }
+                            Text(
+                                if (state.installedLocalModelId != null) "Download and replace current model"
+                                else if (state.download.status == ModelDownloadStatus.FAILED) "Retry download"
+                                else "Download selected model"
+                            )
                         }
                     }
                 }
             }
 
-            state.error?.let { message ->
-                Text(message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Allow mobile data", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "Off by default; model downloads use Wi-Fi/unmetered networks unless enabled.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = state.mobileDataAllowed,
+                    onCheckedChange = viewModel::setMobileDataAllowed,
+                    enabled = !state.isBusy &&
+                        state.download.status != ModelDownloadStatus.DOWNLOADING &&
+                        state.download.status != ModelDownloadStatus.QUEUED &&
+                        state.download.status != ModelDownloadStatus.PAUSED,
+                )
             }
 
+            state.download.message?.takeIf { state.download.status == ModelDownloadStatus.FAILED }?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
+            state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
             Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun LocalModelCard(
+    model: LocalModelDefinition,
+    selected: Boolean,
+    installed: Boolean,
+    download: ModelDownloadStatus?,
+    onSelect: () -> Unit,
+) {
+    Card(
+        onClick = onSelect,
+        enabled = model.downloadable,
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) MaterialTheme.colorScheme.secondaryContainer
+            else MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            RadioButton(selected = selected, onClick = onSelect, enabled = model.downloadable)
+            Spacer(Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(model.displayName, style = MaterialTheme.typography.titleMedium)
+                Text(model.description, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    if (installed) "Installed and verified"
+                    else if (!model.downloadable) "Not available for this app build"
+                    else when (download) {
+                        ModelDownloadStatus.QUEUED -> "Download queued"
+                        ModelDownloadStatus.DOWNLOADING -> "Downloading"
+                        ModelDownloadStatus.PAUSED -> "Waiting for an allowed network"
+                        ModelDownloadStatus.FAILED -> "Download failed"
+                        else -> "Download available"
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (installed) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(model.availabilityNote, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }
@@ -212,10 +237,7 @@ private fun BackendPreferenceCard(
             else MaterialTheme.colorScheme.surfaceContainer,
         ),
     ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             RadioButton(selected = selected, onClick = onSelect, enabled = enabled)
             Spacer(Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
