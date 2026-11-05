@@ -149,7 +149,7 @@ class LiteRtLmPickupAgent @Inject constructor(
         check(context.cacheDir.usableSpace >= MIN_RUNTIME_CACHE_BYTES) {
             "Not enough free storage for the LiteRT-LM runtime cache"
         }
-        check(modelId == LocalModelCatalog.DEFAULT_MODEL_ID) {
+        check(LocalModelCatalog.get(modelId).pickupAgentValidated) {
             "This model has not yet passed this app's pickup-agent compatibility tests"
         }
     }
