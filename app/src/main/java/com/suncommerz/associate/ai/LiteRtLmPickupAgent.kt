@@ -90,7 +90,7 @@ class LiteRtLmPickupAgent @Inject constructor(
         if (runner != null && loadedModelId == selected.id) return runner!!
 
         releaseNativeEngine()
-        ensureDeviceCanRunModel(selected.id)
+        ensureDeviceCanRunModel(selected)
         val modelFile = modelDownloadManager.installedModelFile()
             ?: throw IllegalStateException("The installed local model is not verified.")
         val localModel = LiteRtLmModel.create(
@@ -126,12 +126,16 @@ class LiteRtLmPickupAgent @Inject constructor(
         loadedModelId = null
     }
 
-    private fun ensureDeviceCanRunModel(modelId: String) {
-        check(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            "LiteRT-LM requires Android 8.0 or later"
+    private fun ensureDeviceCanRunModel(definition: LocalModelDefinition) {
+        definition.minimumAndroidApi?.let { minimumApi ->
+            check(Build.VERSION.SDK_INT >= minimumApi) {
+                "This local model requires Android API $minimumApi or later"
+            }
         }
-        check(Build.SUPPORTED_ABIS.any { it == "arm64-v8a" }) {
-            "This LiteRT-LM model requires a compatible 64-bit ARM device"
+        if (definition.requiresArm64 == true) {
+            check(Build.SUPPORTED_ABIS.any { it == "arm64-v8a" }) {
+                "This local model requires a compatible 64-bit ARM device"
+            }
         }
 
         val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
@@ -140,23 +144,23 @@ class LiteRtLmPickupAgent @Inject constructor(
         }
         val memoryInfo = ActivityManager.MemoryInfo()
         activityManager.getMemoryInfo(memoryInfo)
-        check(memoryInfo.totalMem >= MIN_DEVICE_RAM_BYTES) {
-            "This local model is intended for devices with approximately 8 GB RAM or more"
+        definition.minimumTotalRamBytes?.let { minimum ->
+            check(memoryInfo.totalMem >= minimum) {
+                "This model requires at least ${minimum / (1024L * 1024L * 1024L)} GiB of device RAM"
+            }
         }
-        check(!memoryInfo.lowMemory && memoryInfo.availMem >= MIN_AVAILABLE_RAM_BYTES) {
-            "Not enough free memory to safely load this local model"
+        definition.minimumAvailableRamBytes?.let { minimum ->
+            check(!memoryInfo.lowMemory && memoryInfo.availMem >= minimum) {
+                "Not enough free memory to safely load this local model"
+            }
         }
-        check(context.cacheDir.usableSpace >= MIN_RUNTIME_CACHE_BYTES) {
-            "Not enough free storage for the LiteRT-LM runtime cache"
+        definition.minimumRuntimeCacheBytes?.let { minimum ->
+            check(context.cacheDir.usableSpace >= minimum) {
+                "Not enough free storage for the LiteRT-LM runtime cache"
+            }
         }
-        check(LocalModelCatalog.get(modelId).pickupAgentValidated) {
+        check(definition.pickupAgentValidated) {
             "This model has not yet passed this app's pickup-agent compatibility tests"
         }
-    }
-
-    private companion object {
-        const val MIN_DEVICE_RAM_BYTES = 8L * 1024L * 1024L * 1024L
-        const val MIN_AVAILABLE_RAM_BYTES = 3L * 1024L * 1024L * 1024L
-        const val MIN_RUNTIME_CACHE_BYTES = 512L * 1024L * 1024L
     }
 }
