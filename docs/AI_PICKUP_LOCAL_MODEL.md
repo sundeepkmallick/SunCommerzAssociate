@@ -8,13 +8,26 @@ The first-install default is **Firebase ADK**. In the app bar, open **AI Model P
 
 - **Firebase ADK** — cloud backend and application fallback.
 - **Gemini Nano** — Android/AICore-managed on-device model. The app checks ML Kit GenAI feature status and does not download or manage Gemini Nano weights.
-- **Gemma 4 E2B IT (LiteRT-LM)** — optional model downloaded and stored by this app. It can be selected only after the downloaded artifact has passed size and SHA-256 verification.
+- **LiteRT-LM** — optional local model runtime. The selected artifact is downloaded and verified by this app.
 
 If the selected local backend is unavailable or fails to initialize/produce a valid pickup action, the dispatcher uses Firebase ADK for that invocation. The preference remains unchanged so the associate can decide whether to switch it.
 
-All backends share the pickup instructions and read-only inventory tools. Order mutations remain exclusively behind the existing associate approval action.
+All backends share the pickup instructions and equivalent inventory capabilities. Firebase and LiteRT-LM use the shared ADK agent factory; Gemini Nano uses its separate ML Kit Agent API/AppFunctions integration. Order mutations remain exclusively behind the existing associate approval action.
 
-## Gemma 4 E2B IT download
+## Local model catalogue
+
+The preferences screen is backed by `LocalModelCatalog`. Runtime support and BOPIS suitability are tracked separately: a model must have a compatible LiteRT-LM artifact, a pinned URL and checksum, and pass the app's pickup tool-calling scenarios before it is downloadable.
+
+| Model | Catalogue state | Reason |
+|---|---|---|
+| Gemma 4 E2B IT | Downloadable and pickup-validated | Pinned artifact and SHA-256 are verified for this app's LiteRT-LM 0.13.1 / ADK dependency set. |
+| Qwen3 0.6B | Listed, not selectable/downloadable | The published model/runtime combination is not enabled for the app's pinned LiteRT-LM 0.13.1 dependency. It also has not passed this app's pickup tool-calling tests. |
+
+Google's LiteRT-LM documentation lists models beyond Gemma, including Gemma 3n, FunctionGemma, Phi-4 Mini, Qwen2.5 and Qwen3. That is runtime/model-family support, not a guarantee that every artifact works with this app's pinned runtime or that every model reliably invokes our ADK tools. Check the [official supported-model list](https://developers.google.com/edge/litert-lm/overview) and the individual model card before adding an entry.
+
+Do not add an artifact as downloadable until its exact revision, filename, size, SHA-256, minimum runtime version, device requirements and pickup-agent validation state are known.
+
+## Gemma 4 E2B IT artifact
 
 The app downloads the CPU-compatible .litertlm artifact from the LiteRT Community Hugging Face repository using a pinned revision:
 
@@ -24,29 +37,31 @@ The app downloads the CPU-compatible .litertlm artifact from the LiteRT Communit
 - Expected size: 2,588,147,712 bytes (approximately 2.59 GB)
 - Expected SHA-256: 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c
 
-The artifact and checksum are documented by the Arm Gemma 4 download guide and the Hugging Face model file metadata. Confirm the upstream revision/checksum again before changing the pinned artifact.
+Confirm the upstream revision/checksum again before changing the pinned artifact.
 
-### Download behavior
+## Download, replacement and removal
 
 - The associate explicitly starts the download from AI Model Preferences.
 - Wi-Fi/unmetered network is the default. Mobile data can be explicitly enabled before starting.
-- Android DownloadManager owns the transfer, so it continues outside the app and survives app process death/reboot. The platform retries and resumes interrupted transfers when the host supports it.
-- The settings screen reports transfer progress and status when reopened.
-- Cancel removes the in-progress download and partial file. A failed download can be retried.
-- The app requires at least the artifact size plus 512 MiB free in app-specific external storage.
-- The file is first downloaded as a temporary file. The app checks exact byte size and SHA-256, then renames it to the final model filename. A failed integrity check discards the file.
-- Removing the model switches a LiteRT-LM preference back to Firebase ADK.
+- Android DownloadManager owns the transfer, so it continues outside the app and survives app process death/reboot.
+- The settings screen reports transfer progress and status when reopened. A failed download can be retried; an in-progress download can be cancelled.
+- The app requires the artifact size plus 512 MiB free in app-specific external storage.
+- The model is downloaded to a temporary file. Exact byte size and SHA-256 are checked before activation.
+- A replacement is staged only after verification. The currently installed model is retained if the replacement download or integrity check fails. After successful activation, the previous model file is deleted.
+- The LiteRT-LM engine is released before a model file is replaced or removed.
+- Only one local model is retained after a successful replacement. The app may temporarily need space for both the existing and replacement model during download.
+- Removing the installed model switches a LiteRT-LM preference back to Firebase ADK.
 
-The final model path is the app-specific external files directory:
- /sdcard/Android/data/com.suncommerz.associate/files/gemma-4-E2B-it.litertlm
+The Gemma model is stored in the app-specific external files directory:
+`/sdcard/Android/data/com.suncommerz.associate/files/gemma-4-E2B-it.litertlm`
 
 ## LiteRT-LM runtime admission
 
-The existing runtime performs conservative device checks before initialization: Android 8+, arm64, not classified as low-RAM, at least 8 GiB total RAM, at least 3 GiB currently available, and 512 MiB free runtime-cache space. These are application guardrails, not official universal hardware guarantees. A model initialization or inference failure falls back to Firebase ADK.
+The current Gemma runtime performs conservative device checks before initialization: Android 8+, arm64, not classified as low-RAM, at least 8 GiB total RAM, at least 3 GiB currently available, and 512 MiB free runtime-cache space. These are application guardrails, not official universal hardware guarantees. The ADK factory is model-agnostic; model-specific admission requirements belong in catalogue metadata and validation, not in pickup-agent instructions or tool logic.
 
 ## Build and validation
 
-- Use JDK 21 or newer for the LiteRT-LM Android runtime dependencies.
+- The app currently pins LiteRT-LM 0.13.1 for its ADK integration. Do not upgrade this dependency without checking the ADK adapter compatibility and rebuilding.
 - The model is not bundled in the APK.
 - Gemini Nano Agent API and Android AppFunctions support remain preview/alpha and require supported physical devices.
 - Build, unit tests, emulator tests, and physical-device download/inference tests must pass before production rollout.
