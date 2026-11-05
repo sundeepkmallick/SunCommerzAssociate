@@ -31,8 +31,18 @@ data class LocalModelDefinition(
     val minimumTotalRamBytes: Long?,
     val minimumAvailableRamBytes: Long?,
     val minimumRuntimeCacheBytes: Long?,
-    val availabilityNote: String,
-)
+    val availabilityStatusNote: String,
+) {
+    /** Complete user-facing note: estimated size, runtime, device, license, and release state. */
+    val availabilityNote: String
+        get() = listOf(
+            "Approximate download size: $approximateSizeMb MB.",
+            "LiteRT-LM compatibility: $runtimeCompatibilityNote",
+            "Device compatibility: $deviceCompatibilityNote",
+            "License: $licenseNote",
+            availabilityStatusNote,
+        ).joinToString(" ")
+}
 
 object LocalModelCatalog {
     const val DEFAULT_MODEL_ID = "gemma-4-e2b-it"
@@ -68,7 +78,7 @@ object LocalModelCatalog {
             minimumTotalRamBytes = 8L * 1024L * 1024L * 1024L,
             minimumAvailableRamBytes = 3L * 1024L * 1024L * 1024L,
             minimumRuntimeCacheBytes = 512L * 1024L * 1024L,
-            availabilityNote = "Available now. Exact artifact revision, byte size, and SHA-256 are pinned. This is the only catalogue model currently verified for this app's BOPIS pickup-agent flow.",
+            availabilityStatusNote = "Available now. Exact artifact revision, byte size, and SHA-256 are pinned. This is the only catalogue model currently verified for this app's BOPIS pickup-agent flow.",
         ),
         LocalModelDefinition(
             id = "gemma-4-e4b-it",
@@ -91,7 +101,7 @@ object LocalModelCatalog {
             minimumTotalRamBytes = null,
             minimumAvailableRamBytes = null,
             minimumRuntimeCacheBytes = null,
-            availabilityNote = NOT_YET_DOWNLOADABLE,
+            availabilityStatusNote = NOT_YET_DOWNLOADABLE,
         ),
         LocalModelDefinition(
             id = "gemma-3n-e2b-it",
@@ -114,7 +124,7 @@ object LocalModelCatalog {
             minimumTotalRamBytes = null,
             minimumAvailableRamBytes = null,
             minimumRuntimeCacheBytes = null,
-            availabilityNote = NOT_YET_DOWNLOADABLE,
+            availabilityStatusNote = NOT_YET_DOWNLOADABLE,
         ),
         LocalModelDefinition(
             id = "gemma-3n-e4b-it",
@@ -137,7 +147,7 @@ object LocalModelCatalog {
             minimumTotalRamBytes = null,
             minimumAvailableRamBytes = null,
             minimumRuntimeCacheBytes = null,
-            availabilityNote = NOT_YET_DOWNLOADABLE,
+            availabilityStatusNote = NOT_YET_DOWNLOADABLE,
         ),
         LocalModelDefinition(
             id = "gemma3-1b-it",
@@ -160,7 +170,7 @@ object LocalModelCatalog {
             minimumTotalRamBytes = null,
             minimumAvailableRamBytes = null,
             minimumRuntimeCacheBytes = null,
-            availabilityNote = NOT_YET_DOWNLOADABLE,
+            availabilityStatusNote = NOT_YET_DOWNLOADABLE,
         ),
         LocalModelDefinition(
             id = "functiongemma-270m",
@@ -183,7 +193,7 @@ object LocalModelCatalog {
             minimumTotalRamBytes = null,
             minimumAvailableRamBytes = null,
             minimumRuntimeCacheBytes = null,
-            availabilityNote = "Experimental candidate only. This is a base/function model rather than a standard instruction-tuned chat model; it needs a separate BOPIS tool-calling evaluation. $NOT_YET_DOWNLOADABLE",
+            availabilityStatusNote = "Experimental candidate only. This is a base/function model rather than a standard instruction-tuned chat model; it needs a separate BOPIS tool-calling evaluation. $NOT_YET_DOWNLOADABLE",
         ),
         LocalModelDefinition(
             id = "phi-4-mini-instruct",
@@ -206,7 +216,7 @@ object LocalModelCatalog {
             minimumTotalRamBytes = null,
             minimumAvailableRamBytes = null,
             minimumRuntimeCacheBytes = null,
-            availabilityNote = NOT_YET_DOWNLOADABLE,
+            availabilityStatusNote = NOT_YET_DOWNLOADABLE,
         ),
         LocalModelDefinition(
             id = "qwen2.5-1.5b-instruct",
@@ -229,7 +239,7 @@ object LocalModelCatalog {
             minimumTotalRamBytes = null,
             minimumAvailableRamBytes = null,
             minimumRuntimeCacheBytes = null,
-            availabilityNote = NOT_YET_DOWNLOADABLE,
+            availabilityStatusNote = NOT_YET_DOWNLOADABLE,
         ),
         LocalModelDefinition(
             id = "qwen3-0.6b",
@@ -252,7 +262,7 @@ object LocalModelCatalog {
             minimumTotalRamBytes = null,
             minimumAvailableRamBytes = null,
             minimumRuntimeCacheBytes = null,
-            availabilityNote = "Listed by Google, but the exact artifact variant must be pinned. The newer dynamic GPU export needs LiteRT-LM 0.19.0+. BOPIS tool calling is not validated. $NOT_YET_DOWNLOADABLE",
+            availabilityStatusNote = "Listed by Google, but the exact artifact variant must be pinned. The newer dynamic GPU export needs LiteRT-LM 0.19.0+. BOPIS tool calling is not validated. $NOT_YET_DOWNLOADABLE",
         ),
         LocalModelDefinition(
             id = "qwen2.5-0.5b-instruct",
@@ -275,7 +285,7 @@ object LocalModelCatalog {
             minimumTotalRamBytes = null,
             minimumAvailableRamBytes = null,
             minimumRuntimeCacheBytes = null,
-            availabilityNote = NOT_YET_DOWNLOADABLE,
+            availabilityStatusNote = NOT_YET_DOWNLOADABLE,
         ),
     )
 
