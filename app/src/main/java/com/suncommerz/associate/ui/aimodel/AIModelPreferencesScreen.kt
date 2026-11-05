@@ -111,7 +111,7 @@ fun AIModelPreferencesScreen(
                         state.download.status == ModelDownloadStatus.PAUSED
                     ) {
                         LinearProgressIndicator(
-                            progress = { state.download.progressPercent / 100f },
+                            progress = state.download.progressPercent / 100f,
                             modifier = Modifier.fillMaxWidth(),
                         )
                         Text(
