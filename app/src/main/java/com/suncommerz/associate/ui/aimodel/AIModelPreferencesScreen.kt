@@ -73,7 +73,7 @@ fun AIModelPreferencesScreen(
 
             Text("LiteRT-LM local models", style = MaterialTheme.typography.titleLarge)
             Text(
-                "Only one local model is installed at a time. Choose a model below; downloading a different supported model replaces the current one after verification.",
+                "Choose any catalogue entry to review its specifications. Only models with a pinned, integrity-verified artifact and completed app validation can currently be downloaded. One local model is installed at a time; a verified replacement retires the previous model only after successful installation.",
                 style = MaterialTheme.typography.bodySmall,
             )
 
@@ -182,7 +182,7 @@ private fun LocalModelCard(
 ) {
     Card(
         onClick = onSelect,
-        enabled = model.downloadable,
+        enabled = true,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = if (selected) MaterialTheme.colorScheme.secondaryContainer
@@ -193,14 +193,19 @@ private fun LocalModelCard(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            RadioButton(selected = selected, onClick = onSelect, enabled = model.downloadable)
+            RadioButton(selected = selected, onClick = onSelect, enabled = true)
             Spacer(Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(model.displayName, style = MaterialTheme.typography.titleMedium)
                 Text(model.description, style = MaterialTheme.typography.bodySmall)
+                Text("Approx. ${model.approximateSizeMb} MB", style = MaterialTheme.typography.labelMedium)
+                Text("LiteRT-LM: ${model.minimumLiteRtLmVersion ?: "Exact minimum version not verified"}", style = MaterialTheme.typography.bodySmall)
+                Text("Runtime: ${model.runtimeCompatibilityNote}", style = MaterialTheme.typography.bodySmall)
+                Text("Device: ${model.deviceCompatibilityNote}", style = MaterialTheme.typography.bodySmall)
+                Text("License: ${model.licenseNote}", style = MaterialTheme.typography.bodySmall)
                 Text(
                     if (installed) "Installed and verified"
-                    else if (!model.downloadable) "Not available for this app build"
+                    else if (!model.downloadable) "Listed · download not enabled"
                     else when (download) {
                         ModelDownloadStatus.QUEUED -> "Download queued"
                         ModelDownloadStatus.DOWNLOADING -> "Downloading"
