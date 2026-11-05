@@ -18,10 +18,7 @@ All backends share the pickup instructions and equivalent inventory capabilities
 
 The preferences screen is backed by `LocalModelCatalog`. Runtime support and BOPIS suitability are tracked separately: a model must have a compatible LiteRT-LM artifact, a pinned URL and checksum, and pass the app's pickup tool-calling scenarios before it is downloadable.
 
-| Model | Catalogue state | Reason |
-|---|---|---|
-| Gemma 4 E2B IT | Downloadable and pickup-validated | Pinned artifact and SHA-256 are verified for this app's LiteRT-LM 0.13.1 / ADK dependency set. |
-| Qwen3 0.6B | Listed, not selectable/downloadable | The published model/runtime combination is not enabled for the app's pinned LiteRT-LM 0.13.1 dependency. It also has not passed this app's pickup tool-calling tests. |
+The preferences screen lists ten candidates. Associates can select any entry to inspect its approximate size, runtime notes, device guidance, license guidance, and availability. Only models with a pinned artifact, integrity metadata, compatible app/runtime integration, and successful BOPIS tool-calling validation can be downloaded. Gemma 4 E2B IT is currently the only enabled model; the complete catalogue is documented below.
 
 Google's LiteRT-LM documentation lists models beyond Gemma, including Gemma 3n, FunctionGemma, Phi-4 Mini, Qwen2.5 and Qwen3. That is runtime/model-family support, not a guarantee that every artifact works with this app's pinned runtime or that every model reliably invokes our ADK tools. Check the [official supported-model list](https://developers.google.com/edge/litert-lm/overview) and the individual model card before adding an entry.
 
