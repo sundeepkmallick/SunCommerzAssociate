@@ -21,6 +21,18 @@ class AIModelPreferencesStore @Inject constructor(
         preferences.edit().putString(KEY_BACKEND, backend.name).apply()
     }
 
+    fun getSelectedLocalModelId(): String =
+        preferences.getString(KEY_LOCAL_MODEL_ID, LocalModelCatalog.DEFAULT_MODEL_ID)
+            ?.takeIf { selected -> LocalModelCatalog.models.any { it.id == selected && it.downloadable } }
+            ?: LocalModelCatalog.DEFAULT_MODEL_ID
+
+    fun setSelectedLocalModelId(modelId: String) {
+        require(LocalModelCatalog.models.any { it.id == modelId && it.downloadable }) {
+            "The selected local model is not available for download in this app build"
+        }
+        preferences.edit().putString(KEY_LOCAL_MODEL_ID, modelId).apply()
+    }
+
     fun isMobileDataAllowed(): Boolean = preferences.getBoolean(KEY_MOBILE_DATA, false)
 
     fun setMobileDataAllowed(allowed: Boolean) {
@@ -31,5 +43,6 @@ class AIModelPreferencesStore @Inject constructor(
         const val PREFERENCES_NAME = "ai_model_preferences"
         const val KEY_BACKEND = "preferred_backend"
         const val KEY_MOBILE_DATA = "allow_mobile_data"
+        const val KEY_LOCAL_MODEL_ID = "selected_local_model_id"
     }
 }
