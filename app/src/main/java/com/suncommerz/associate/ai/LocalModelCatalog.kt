@@ -15,6 +15,7 @@ data class LocalModelDefinition(
     val sha256: String?,
     val minimumLiteRtLmVersion: String,
     val downloadable: Boolean,
+    val pickupAgentValidated: Boolean,
     val availabilityNote: String,
 )
 
@@ -33,6 +34,7 @@ object LocalModelCatalog {
             sha256 = "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c",
             minimumLiteRtLmVersion = "0.13.1",
             downloadable = true,
+            pickupAgentValidated = true,
             availabilityNote = "Available for this app's current LiteRT-LM and ADK dependency set.",
         ),
         LocalModelDefinition(
@@ -42,15 +44,15 @@ object LocalModelCatalog {
             description = "Small chat model with a published LiteRT-LM artifact.",
             artifactFileName = "Qwen3-0.6B.litertlm",
             downloadUrl = null,
-            sizeBytes = 614_000_000L,
+            sizeBytes = 0L,
             sha256 = null,
             minimumLiteRtLmVersion = "0.18.0",
             downloadable = false,
+            pickupAgentValidated = false,
             availabilityNote = "Not enabled: its published artifact requires LiteRT-LM 0.18.0+, while this app is pinned to 0.13.1 for ADK compatibility. Pickup tool calling is also not yet validated.",
         ),
     )
 
     fun get(modelId: String): LocalModelDefinition =
-        models.firstOrNull { it.id == modelId }
-            ?: models.first { it.id == DEFAULT_MODEL_ID }
+        requireNotNull(models.firstOrNull { it.id == modelId }) { "Unknown local model: $modelId" }
 }
