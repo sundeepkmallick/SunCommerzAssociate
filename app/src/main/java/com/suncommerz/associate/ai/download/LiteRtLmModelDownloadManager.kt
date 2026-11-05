@@ -4,6 +4,8 @@ import android.app.DownloadManager
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import com.suncommerz.associate.ai.LocalModelCatalog
+import com.suncommerz.associate.ai.LocalModelDefinition
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -14,34 +16,16 @@ import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
-enum class ModelDownloadStatus {
-    NOT_INSTALLED,
-    QUEUED,
-    DOWNLOADING,
-    PAUSED,
-    VERIFYING,
-    INSTALLED,
-    FAILED,
-}
+enum class ModelDownloadStatus { NOT_INSTALLED, QUEUED, DOWNLOADING, PAUSED, VERIFYING, INSTALLED, FAILED }
 
 data class ModelDownloadState(
     val status: ModelDownloadStatus,
     val progressPercent: Int = 0,
     val downloadedBytes: Long = 0L,
-    val totalBytes: Long = MODEL_SIZE_BYTES,
+    val totalBytes: Long = 0L,
     val message: String? = null,
-) {
-    companion object {
-        const val MODEL_SIZE_BYTES = 2_588_147_712L
-    }
-}
+)
 
-/**
- * Android DownloadManager owns the transfer, allowing it to continue while the
- * app is backgrounded and survive app process death/reboot. Network interruption
- * retries are delegated to the platform. The model is activated only after its
- * published byte size and SHA-256 have both been verified.
- */
 @Singleton
 class LiteRtLmModelDownloadManager @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -49,151 +33,193 @@ class LiteRtLmModelDownloadManager @Inject constructor(
     private val downloadManager =
         context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
     private val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
-
     private val modelDirectory: File
         get() = context.getExternalFilesDir(null) ?: context.filesDir
-    private val installedFile: File
-        get() = File(modelDirectory, MODEL_FILE_NAME)
-    private val temporaryFile: File
-        get() = File(modelDirectory, TEMP_FILE_NAME)
 
-    suspend fun enqueue(allowMobileData: Boolean): ModelDownloadState = withContext(Dispatchers.IO) {
-        if (installedFile.isFile && installedFile.length() == ModelDownloadState.MODEL_SIZE_BYTES) {
-            val installed = getState()
+    suspend fun enqueue(allowMobileData: Boolean): ModelDownloadState =
+        enqueue(LocalModelCatalog.DEFAULT_MODEL_ID, allowMobileData)
+
+    suspend fun enqueue(modelId: String, allowMobileData: Boolean): ModelDownloadState =
+        withContext(Dispatchers.IO) {
+            val definition = requireDownloadableModel(modelId)
+            val installed = getState(modelId)
             if (installed.status == ModelDownloadStatus.INSTALLED) return@withContext installed
-            installedFile.delete()
-        }
 
-        val requiredBytes = ModelDownloadState.MODEL_SIZE_BYTES + MIN_FREE_SPACE_AFTER_DOWNLOAD
-        check(modelDirectory.usableSpace >= requiredBytes) {
-            "At least 3.1 GB of free storage is required to download and install this model."
-        }
-
-        val existingId = preferences.getLong(KEY_DOWNLOAD_ID, INVALID_DOWNLOAD_ID)
-        if (existingId != INVALID_DOWNLOAD_ID) {
-            val existing = query(existingId)
-            if (existing != null && existing.status in ACTIVE_DOWNLOAD_STATUSES) {
-                return@withContext existing.toState()
+            val requiredBytes = definition.sizeBytes + MIN_FREE_SPACE_AFTER_DOWNLOAD
+            check(modelDirectory.usableSpace >= requiredBytes) {
+                "At least ${formatGiB(requiredBytes)} of free storage is required to download this model."
             }
-            downloadManager.remove(existingId)
-        }
 
-        temporaryFile.delete()
-        val request = DownloadManager.Request(Uri.parse(MODEL_DOWNLOAD_URL))
-            .setTitle("Gemma 4 E2B IT")
-            .setDescription("Downloading the optional on-device AI model")
-            .setMimeType("application/octet-stream")
-            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            .setAllowedOverMetered(allowMobileData)
-            .setAllowedOverRoaming(false)
-            .setDestinationInExternalFilesDir(context, null, TEMP_FILE_NAME)
-
-        val id = downloadManager.enqueue(request)
-        preferences.edit()
-            .putLong(KEY_DOWNLOAD_ID, id)
-            .remove(KEY_VERIFIED)
-            .remove(KEY_FAILURE)
-            .apply()
-        ModelDownloadState(ModelDownloadStatus.QUEUED, message = "Download queued")
-    }
-
-    suspend fun getState(): ModelDownloadState = withContext(Dispatchers.IO) {
-        if (installedFile.isFile) {
-            if (installedFile.length() != ModelDownloadState.MODEL_SIZE_BYTES) {
-                installedFile.delete()
-                preferences.edit().remove(KEY_VERIFIED).apply()
-            } else if (preferences.getBoolean(KEY_VERIFIED, false)) {
-                return@withContext ModelDownloadState(ModelDownloadStatus.INSTALLED)
-            } else {
-                val valid = sha256(installedFile).equals(EXPECTED_SHA256, ignoreCase = true)
-                if (valid) {
-                    preferences.edit().putBoolean(KEY_VERIFIED, true).apply()
-                    return@withContext ModelDownloadState(ModelDownloadStatus.INSTALLED)
+            val existingId = preferences.getLong(KEY_DOWNLOAD_ID, INVALID_DOWNLOAD_ID)
+            if (existingId != INVALID_DOWNLOAD_ID) {
+                val existing = query(existingId)
+                if (existing != null && existing.status in ACTIVE_DOWNLOAD_STATUSES) {
+                    val activeModelId = preferences.getString(KEY_DOWNLOAD_MODEL_ID, null)
+                    if (activeModelId == modelId) return@withContext existing.toState(definition.sizeBytes)
+                    downloadManager.remove(existingId)
+                } else {
+                    downloadManager.remove(existingId)
                 }
-                installedFile.delete()
-                preferences.edit().remove(KEY_VERIFIED).apply()
-                return@withContext failed("The existing model failed SHA-256 verification and was removed.")
             }
+
+            temporaryFile(modelId).delete()
+            val request = DownloadManager.Request(Uri.parse(checkNotNull(definition.downloadUrl)))
+                .setTitle(definition.displayName)
+                .setDescription("Downloading the optional on-device AI model")
+                .setMimeType("application/octet-stream")
+                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                .setAllowedOverMetered(allowMobileData)
+                .setAllowedOverRoaming(false)
+                .setDestinationInExternalFilesDir(context, null, temporaryFile(modelId).name)
+
+            val id = downloadManager.enqueue(request)
+            preferences.edit()
+                .putLong(KEY_DOWNLOAD_ID, id)
+                .putString(KEY_DOWNLOAD_MODEL_ID, modelId)
+                .remove(KEY_FAILURE)
+                .apply()
+            ModelDownloadState(ModelDownloadStatus.QUEUED, totalBytes = definition.sizeBytes, message = "Download queued")
         }
+
+    suspend fun getState(): ModelDownloadState =
+        getState(preferences.getString(KEY_ACTIVE_MODEL_ID, LocalModelCatalog.DEFAULT_MODEL_ID)
+            ?: LocalModelCatalog.DEFAULT_MODEL_ID)
+
+    suspend fun getState(modelId: String): ModelDownloadState = withContext(Dispatchers.IO) {
+        val definition = LocalModelCatalog.get(modelId)
+        if (isInstalled(modelId)) return@withContext ModelDownloadState(
+            ModelDownloadStatus.INSTALLED, totalBytes = definition.sizeBytes
+        )
 
         val id = preferences.getLong(KEY_DOWNLOAD_ID, INVALID_DOWNLOAD_ID)
-        if (id == INVALID_DOWNLOAD_ID) {
-            val previousFailure = preferences.getString(KEY_FAILURE, null)
-            return@withContext if (previousFailure == null) {
-                ModelDownloadState(ModelDownloadStatus.NOT_INSTALLED)
-            } else {
-                ModelDownloadState(ModelDownloadStatus.FAILED, message = previousFailure)
-            }
+        val downloadingModelId = preferences.getString(KEY_DOWNLOAD_MODEL_ID, null)
+        if (id == INVALID_DOWNLOAD_ID || downloadingModelId != modelId) {
+            val failure = preferences.getString(KEY_FAILURE, null)
+            return@withContext if (failure == null) {
+                ModelDownloadState(ModelDownloadStatus.NOT_INSTALLED, totalBytes = definition.sizeBytes)
+            } else ModelDownloadState(ModelDownloadStatus.FAILED, totalBytes = definition.sizeBytes, message = failure)
         }
 
         val record = query(id)
-            ?: return@withContext failed("The download record is no longer available. You can start it again.")
-
+            ?: return@withContext failed("The download record is no longer available. You can start it again.", definition.sizeBytes)
         when (record.status) {
-            DownloadManager.STATUS_SUCCESSFUL -> verifyAndInstall(id)
+            DownloadManager.STATUS_SUCCESSFUL -> verifyAndInstall(id, definition)
             DownloadManager.STATUS_FAILED -> ModelDownloadState(
-                ModelDownloadStatus.FAILED,
+                ModelDownloadStatus.FAILED, totalBytes = definition.sizeBytes,
                 message = record.reasonDescription(),
             )
-            else -> record.toState()
+            else -> record.toState(definition.sizeBytes)
         }
     }
 
     suspend fun cancelDownload() = withContext(Dispatchers.IO) {
         val id = preferences.getLong(KEY_DOWNLOAD_ID, INVALID_DOWNLOAD_ID)
         if (id != INVALID_DOWNLOAD_ID) downloadManager.remove(id)
-        preferences.edit().remove(KEY_DOWNLOAD_ID).remove(KEY_FAILURE).apply()
-        temporaryFile.delete()
+        val modelId = preferences.getString(KEY_DOWNLOAD_MODEL_ID, LocalModelCatalog.DEFAULT_MODEL_ID)
+            ?: LocalModelCatalog.DEFAULT_MODEL_ID
+        preferences.edit().remove(KEY_DOWNLOAD_ID).remove(KEY_DOWNLOAD_MODEL_ID).remove(KEY_FAILURE).apply()
+        temporaryFile(modelId).delete()
     }
 
     suspend fun removeInstalledModel() = withContext(Dispatchers.IO) {
         cancelDownload()
-        installedFile.delete()
-        preferences.edit().remove(KEY_VERIFIED).apply()
+        val activeId = preferences.getString(KEY_ACTIVE_MODEL_ID, LocalModelCatalog.DEFAULT_MODEL_ID)
+            ?: LocalModelCatalog.DEFAULT_MODEL_ID
+        LocalModelCatalog.models.forEach { model -> installedFile(model).delete() }
+        preferences.edit().remove(KEY_VERIFIED).remove(KEY_ACTIVE_MODEL_ID).apply()
+        Log.i(TAG, "Removed installed LiteRT-LM model $activeId")
     }
 
-    fun isInstalled(): Boolean =
-        installedFile.isFile &&
-            installedFile.length() == ModelDownloadState.MODEL_SIZE_BYTES &&
-            preferences.getBoolean(KEY_VERIFIED, false)
+    fun isInstalled(): Boolean = installedModelDefinition() != null
 
-    fun installedModelFile(): File? = installedFile.takeIf { isInstalled() }
+    fun isInstalled(modelId: String): Boolean {
+        val definition = LocalModelCatalog.get(modelId)
+        val file = installedFile(definition)
+        return file.isFile && file.length() == definition.sizeBytes &&
+            preferences.getBoolean(KEY_VERIFIED, false) &&
+            preferences.getString(KEY_ACTIVE_MODEL_ID, LocalModelCatalog.DEFAULT_MODEL_ID) == modelId
+    }
 
-    private suspend fun verifyAndInstall(id: Long): ModelDownloadState {
-        val source = temporaryFile
-        if (!source.isFile || source.length() != ModelDownloadState.MODEL_SIZE_BYTES) {
+    fun installedModelDefinition(): LocalModelDefinition? {
+        val modelId = preferences.getString(KEY_ACTIVE_MODEL_ID, LocalModelCatalog.DEFAULT_MODEL_ID)
+            ?: LocalModelCatalog.DEFAULT_MODEL_ID
+        return LocalModelCatalog.get(modelId).takeIf { isInstalled(it.id) }
+    }
+
+    fun installedModelFile(): File? =
+        installedModelDefinition()?.let(::installedFile)
+
+    fun installedModelFile(modelId: String): File? =
+        LocalModelCatalog.get(modelId).takeIf { isInstalled(modelId) }?.let(::installedFile)
+
+    private suspend fun verifyAndInstall(id: Long, definition: LocalModelDefinition): ModelDownloadState {
+        val source = temporaryFile(definition.id)
+        if (!source.isFile || source.length() != definition.sizeBytes) {
             downloadManager.remove(id)
-            preferences.edit().remove(KEY_DOWNLOAD_ID).apply()
-            return failed("Downloaded file size did not match the published model artifact.")
+            clearDownload()
+            return failed("Downloaded file size did not match the published model artifact.", definition.sizeBytes)
         }
 
+        val expectedHash = definition.sha256
+            ?: return failed("This model has no verified checksum and cannot be installed safely.", definition.sizeBytes)
         val actualHash = sha256(source)
-        if (!actualHash.equals(EXPECTED_SHA256, ignoreCase = true)) {
+        if (!actualHash.equals(expectedHash, ignoreCase = true)) {
             source.delete()
             downloadManager.remove(id)
-            preferences.edit().remove(KEY_DOWNLOAD_ID).apply()
-            return failed("Model integrity verification failed. The incomplete or modified file was discarded.")
+            clearDownload()
+            return failed("Model integrity verification failed. The downloaded file was discarded.", definition.sizeBytes)
         }
 
-        val destination = installedFile
-        if (destination.exists()) destination.delete()
-        check(source.renameTo(destination)) {
-            "The verified model could not be moved into its installation location."
+        val destination = installedFile(definition)
+        val backup = File(modelDirectory, "${definition.artifactFileName}.previous")
+        backup.delete()
+        if (destination.exists()) check(destination.renameTo(backup)) {
+            "Could not safely stage the previous model before replacement."
         }
+        if (!source.renameTo(destination)) {
+            if (backup.exists()) backup.renameTo(destination)
+            throw IllegalStateException("The verified model could not be moved into its installation location.")
+        }
+
+        val previousId = preferences.getString(KEY_ACTIVE_MODEL_ID, null)
         preferences.edit()
             .remove(KEY_DOWNLOAD_ID)
+            .remove(KEY_DOWNLOAD_MODEL_ID)
             .remove(KEY_FAILURE)
+            .putString(KEY_ACTIVE_MODEL_ID, definition.id)
             .putBoolean(KEY_VERIFIED, true)
             .apply()
+        backup.delete()
+        previousId?.takeIf { it != definition.id }?.let { oldId ->
+            LocalModelCatalog.models.firstOrNull { it.id == oldId }?.let(::installedFile)?.delete()
+        }
         downloadManager.remove(id)
-        Log.i(TAG, "Gemma 4 E2B IT installed and SHA-256 verified")
-        return ModelDownloadState(ModelDownloadStatus.INSTALLED)
+        Log.i(TAG, "Installed and SHA-256 verified ${definition.displayName}")
+        return ModelDownloadState(ModelDownloadStatus.INSTALLED, totalBytes = definition.sizeBytes)
     }
 
-    private fun failed(message: String): ModelDownloadState {
-        preferences.edit().putString(KEY_FAILURE, message).apply()
-        return ModelDownloadState(ModelDownloadStatus.FAILED, message = message)
+    private fun requireDownloadableModel(modelId: String): LocalModelDefinition {
+        val definition = LocalModelCatalog.get(modelId)
+        check(definition.downloadable && definition.downloadUrl != null && definition.sha256 != null) {
+            definition.availabilityNote
+        }
+        return definition
     }
+
+    private fun installedFile(definition: LocalModelDefinition) =
+        File(modelDirectory, definition.artifactFileName)
+
+    private fun temporaryFile(modelId: String): File {
+        val definition = LocalModelCatalog.get(modelId)
+        return File(modelDirectory, "${definition.artifactFileName}.download")
+    }
+
+    private fun clearDownload() {
+        preferences.edit().remove(KEY_DOWNLOAD_ID).remove(KEY_DOWNLOAD_MODEL_ID).apply()
+    }
+
+    private fun failed(message: String, totalBytes: Long) =
+        ModelDownloadState(ModelDownloadStatus.FAILED, totalBytes = totalBytes, message = message)
 
     private fun query(id: Long): DownloadRecord? {
         val cursor = downloadManager.query(DownloadManager.Query().setFilterById(id)) ?: return null
@@ -208,7 +234,7 @@ class LiteRtLmModelDownloadManager @Inject constructor(
         }
     }
 
-    private fun DownloadRecord.toState(): ModelDownloadState {
+    private fun DownloadRecord.toState(expectedBytes: Long): ModelDownloadState {
         val percent = if (total > 0L) ((downloaded * 100L) / total).toInt().coerceIn(0, 100) else 0
         val status = when (this.status) {
             DownloadManager.STATUS_PENDING -> ModelDownloadStatus.QUEUED
@@ -216,12 +242,7 @@ class LiteRtLmModelDownloadManager @Inject constructor(
             DownloadManager.STATUS_PAUSED -> ModelDownloadStatus.PAUSED
             else -> ModelDownloadStatus.NOT_INSTALLED
         }
-        return ModelDownloadState(
-            status,
-            percent,
-            downloaded,
-            total.takeIf { it > 0 } ?: ModelDownloadState.MODEL_SIZE_BYTES,
-        )
+        return ModelDownloadState(status, percent, downloaded, total.takeIf { it > 0 } ?: expectedBytes)
     }
 
     private fun DownloadRecord.reasonDescription(): String = when (reason) {
@@ -246,36 +267,27 @@ class LiteRtLmModelDownloadManager @Inject constructor(
                 digest.update(buffer, 0, count)
             }
         }
-        digest.digest().joinToString("") {
-            "%02x".format(Locale.US, it.toInt() and 0xff)
-        }
+        digest.digest().joinToString("") { "%02x".format(Locale.US, it.toInt() and 0xff) }
     }
 
+    private fun formatGiB(bytes: Long) = String.format(Locale.US, "%.2f GiB", bytes / (1024.0 * 1024.0 * 1024.0))
+
     private data class DownloadRecord(
-        val status: Int,
-        val reason: Int,
-        val downloaded: Long,
-        val total: Long,
+        val status: Int, val reason: Int, val downloaded: Long, val total: Long,
     )
 
     private companion object {
         const val TAG = "LiteRtLmDownload"
         const val PREFERENCES_NAME = "litert_lm_download"
         const val KEY_DOWNLOAD_ID = "download_id"
+        const val KEY_DOWNLOAD_MODEL_ID = "download_model_id"
         const val KEY_VERIFIED = "verified"
         const val KEY_FAILURE = "failure"
+        const val KEY_ACTIVE_MODEL_ID = "active_model_id"
         const val INVALID_DOWNLOAD_ID = -1L
-        const val MODEL_FILE_NAME = "gemma-4-E2B-it.litertlm"
-        const val TEMP_FILE_NAME = "gemma-4-E2B-it.litertlm.download"
         const val MIN_FREE_SPACE_AFTER_DOWNLOAD = 512L * 1024L * 1024L
-        const val EXPECTED_SHA256 = "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c"
-        const val MODEL_DOWNLOAD_URL =
-            "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/6b78abd019e61a1ca4cbe3b212d2c9ce8ff38a94/gemma-4-E2B-it.litertlm"
-
         val ACTIVE_DOWNLOAD_STATUSES = setOf(
-            DownloadManager.STATUS_PENDING,
-            DownloadManager.STATUS_RUNNING,
-            DownloadManager.STATUS_PAUSED,
+            DownloadManager.STATUS_PENDING, DownloadManager.STATUS_RUNNING, DownloadManager.STATUS_PAUSED,
         )
     }
 }
