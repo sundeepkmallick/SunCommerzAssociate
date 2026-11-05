@@ -23,12 +23,13 @@ class AIModelPreferencesStore @Inject constructor(
 
     fun getSelectedLocalModelId(): String =
         preferences.getString(KEY_LOCAL_MODEL_ID, LocalModelCatalog.DEFAULT_MODEL_ID)
-            ?.takeIf { selected -> LocalModelCatalog.models.any { it.id == selected && it.downloadable } }
+            ?.takeIf { selected -> LocalModelCatalog.models.any { it.id == selected } }
             ?: LocalModelCatalog.DEFAULT_MODEL_ID
 
+    /** Selection is informational; download eligibility is checked separately by the download manager. */
     fun setSelectedLocalModelId(modelId: String) {
-        require(LocalModelCatalog.models.any { it.id == modelId && it.downloadable }) {
-            "The selected local model is not available for download in this app build"
+        require(LocalModelCatalog.models.any { it.id == modelId }) {
+            "Unknown local model: $modelId"
         }
         preferences.edit().putString(KEY_LOCAL_MODEL_ID, modelId).apply()
     }
