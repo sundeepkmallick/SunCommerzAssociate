@@ -65,3 +65,27 @@ The current Gemma runtime performs conservative device checks before initializat
 - The model is not bundled in the APK.
 - Gemini Nano Agent API and Android AppFunctions support remain preview/alpha and require supported physical devices.
 - Build, unit tests, emulator tests, and physical-device download/inference tests must pass before production rollout.
+
+
+## Expanded model catalogue (November 2026)
+
+The preferences screen now lists the ten chat/base candidates from Google's LiteRT-LM supported-model table. Associates can select any entry to inspect its approximate bundle size, model type, runtime note, device note, license guidance, and availability. Selection is informational; it does not enable installation.
+
+| Model | Approx. bundle size | Type | Availability |
+|---|---:|---|---|
+| Gemma 4 E2B IT | 2,583 MB | Chat | Downloadable; exact artifact pinned and BOPIS validated |
+| Gemma 4 E4B IT | 3,654 MB | Chat | Listed; artifact and BOPIS validation pending |
+| Gemma 3n E2B | 2,965 MB | Chat | Listed; artifact and BOPIS validation pending |
+| Gemma 3n E4B | 4,235 MB | Chat | Listed; artifact and BOPIS validation pending |
+| Gemma 3 1B | 1,005 MB | Chat | Listed; artifact and BOPIS validation pending |
+| FunctionGemma | 289 MB | Base/function model | Experimental; separate tool-calling evaluation required |
+| Phi-4 Mini | 3,906 MB | Chat | Listed; artifact and BOPIS validation pending |
+| Qwen2.5 1.5B | 1,598 MB | Chat | Listed; artifact and BOPIS validation pending |
+| Qwen3 0.6B | 586 MB | Chat | Google Android guidance demonstrates a CPU/GPU artifact with LiteRT-LM 0.18.0; app ADK compatibility pending |
+| Qwen2.5 0.5B | 521 MB | Chat | Listed; artifact and BOPIS validation pending |
+
+Sizes are approximate published bundle sizes, not peak memory requirements. Google's benchmark results are tied to particular phones and execution backends; they are reference points, not universal minimum hardware specifications. Exact artifact ABI, Android API, available RAM, runtime cache, and device performance must be measured before enabling a model for download.
+
+Catalogue states are deliberately separate: listed means documented by Google; downloadable requires an exact artifact URL/revision, filename, byte size, SHA-256, license review, compatible app/runtime integration, and successful integrity verification; BOPIS validated means the model has passed the app's stock lookup, substitution/nearby-store, structured response, and tool-call scenarios. Only Gemma 4 E2B IT currently meets the download and BOPIS validation gates. FunctionGemma is a base/function-specialised model rather than a standard chat model and requires separate evaluation.
+
+The current app pins LiteRT-LM 0.13.1 with the ADK adapter. Qwen3's documented Android CPU/GPU candidate is demonstrated with LiteRT-LM 0.18.0, but this does not prove compatibility with the app's ADK adapter. Do not upgrade the runtime independently of checking the adapter, Kotlin/Gradle compatibility, and a complete Android build.
