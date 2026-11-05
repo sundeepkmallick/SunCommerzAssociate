@@ -45,6 +45,7 @@ class AIModelPreferencesViewModel @Inject constructor(
         AIModelPreferencesUiState(
             preferredBackend = preferences.getPreferredBackend(),
             mobileDataAllowed = preferences.isMobileDataAllowed(),
+            selectedLocalModelId = preferences.getSelectedLocalModelId(),
         )
     )
     val uiState: StateFlow<AIModelPreferencesUiState> = _uiState.asStateFlow()
@@ -80,6 +81,7 @@ class AIModelPreferencesViewModel @Inject constructor(
 
     fun selectLocalModel(modelId: String) {
         if (LocalModelCatalog.models.none { it.id == modelId }) return
+        preferences.setSelectedLocalModelId(modelId)
         _uiState.update { it.copy(selectedLocalModelId = modelId, error = null) }
         viewModelScope.launch { refreshDownloadState() }
     }
