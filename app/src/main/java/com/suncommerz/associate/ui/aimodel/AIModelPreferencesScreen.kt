@@ -221,6 +221,12 @@ private fun LocalModelCard(
                 )
                 Text(model.availabilityNote, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    LocalModelCatalog.downloadBlockReason(model, runtimeVersion),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (LocalModelCatalog.canDownload(model, runtimeVersion)) MaterialTheme.colorScheme.onSurfaceVariant
+                    else MaterialTheme.colorScheme.error,
+                )
             }
         }
     }
