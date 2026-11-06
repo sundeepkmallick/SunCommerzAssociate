@@ -2,6 +2,7 @@ package com.suncommerz.associate.ui.aimodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.suncommerz.associate.BuildConfig
 import com.suncommerz.associate.ai.AIBackend
 import com.suncommerz.associate.ai.AIModelPreferencesStore
 import com.suncommerz.associate.ai.GeminiNanoPickupAgent
@@ -23,6 +24,7 @@ import javax.inject.Inject
 
 data class AIModelPreferencesUiState(
     val preferredBackend: AIBackend = AIBackend.FIREBASE,
+    val liteRtLmRuntimeVersion: String = BuildConfig.LITERT_LM_VERSION,
     val nanoAvailable: Boolean? = null,
     val nanoStatus: String? = null,
     val mobileDataAllowed: Boolean = false,
@@ -46,6 +48,7 @@ class AIModelPreferencesViewModel @Inject constructor(
             preferredBackend = preferences.getPreferredBackend(),
             mobileDataAllowed = preferences.isMobileDataAllowed(),
             selectedLocalModelId = preferences.getSelectedLocalModelId(),
+            liteRtLmRuntimeVersion = BuildConfig.LITERT_LM_VERSION,
         )
     )
     val uiState: StateFlow<AIModelPreferencesUiState> = _uiState.asStateFlow()
@@ -93,6 +96,12 @@ class AIModelPreferencesViewModel @Inject constructor(
 
     fun downloadModel(modelId: String = _uiState.value.selectedLocalModelId) {
         viewModelScope.launch {
+            val model = LocalModelCatalog.get(modelId)
+            val runtimeVersion = BuildConfig.LITERT_LM_VERSION
+            if (!LocalModelCatalog.canDownload(model, runtimeVersion)) {
+                _uiState.update { it.copy(error = LocalModelCatalog.downloadBlockReason(model, runtimeVersion)) }
+                return@launch
+            }
             _uiState.update { it.copy(isBusy = true, error = null) }
             runCatching {
                 // Release the current engine before a verified replacement can retire its file.
