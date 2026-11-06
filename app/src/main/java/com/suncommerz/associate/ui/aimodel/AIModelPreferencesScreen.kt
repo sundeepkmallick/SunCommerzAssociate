@@ -232,8 +232,7 @@ private fun LocalModelCard(
                 Text(
                     LocalModelCatalog.downloadBlockReason(model, runtimeVersion),
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (LocalModelCatalog.canDownload(model, runtimeVersion)) MaterialTheme.colorScheme.onSurfaceVariant
-                    else MaterialTheme.colorScheme.error,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
