@@ -86,6 +86,7 @@ fun AIModelPreferencesScreen(
                     installed = state.installedLocalModelId == model.id,
                     download = if (state.selectedLocalModelId == model.id) state.download.status else null,
                     onSelect = { viewModel.selectLocalModel(model.id) },
+                    runtimeVersion = state.liteRtLmRuntimeVersion,
                 )
             }
 
@@ -180,6 +181,7 @@ private fun LocalModelCard(
     selected: Boolean,
     installed: Boolean,
     download: ModelDownloadStatus?,
+    runtimeVersion: String,
     onSelect: () -> Unit,
 ) {
     Card(
@@ -205,7 +207,7 @@ private fun LocalModelCard(
                     (model.maximumTestedLiteRtLmVersion?.let { " (tested through $it)" } ?: ""), style = MaterialTheme.typography.bodySmall)
                 Text(
                     if (installed) "Installed and verified"
-                    else if (!LocalModelCatalog.canDownload(model, com.suncommerz.associate.BuildConfig.LITERT_LM_VERSION)) "Listed · download unavailable for this runtime/artifact"
+                    else if (!LocalModelCatalog.canDownload(model, runtimeVersion)) "Listed · download unavailable"
                     else when (download) {
                         ModelDownloadStatus.QUEUED -> "Download queued"
                         ModelDownloadStatus.DOWNLOADING -> "Downloading"
