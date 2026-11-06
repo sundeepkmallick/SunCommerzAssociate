@@ -95,14 +95,22 @@ fun AIModelPreferencesScreen(
                 if (state.download.status == ModelDownloadStatus.INSTALLED &&
                     state.installedLocalModelId == selectedModel.id
                 ) {
-                    BackendPreferenceCard(
-                        title = "Use ${selectedModel.displayName}",
-                        description = "Prefer this installed local model for AI Pickup.",
-                        selected = state.preferredBackend == AIBackend.LITERT_LM,
-                        enabled = true,
-                        status = "Installed and verified",
-                        onSelect = { viewModel.selectBackend(AIBackend.LITERT_LM) },
-                    )
+                    if (selectedModel.pickupAgentValidated) {
+                        BackendPreferenceCard(
+                            title = "Use ${selectedModel.displayName}",
+                            description = "Prefer this installed local model for AI Pickup.",
+                            selected = state.preferredBackend == AIBackend.LITERT_LM,
+                            enabled = true,
+                            status = "Installed, integrity-verified, and BOPIS-validated",
+                            onSelect = { viewModel.selectBackend(AIBackend.LITERT_LM) },
+                        )
+                    } else {
+                        Text(
+                            "Downloaded and integrity-verified, but not yet validated for AI Pickup tool calling. It cannot be selected as the active backend yet.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
                     OutlinedButton(
                         onClick = viewModel::removeModel,
                         enabled = !state.isBusy,
