@@ -33,6 +33,8 @@ android {
         buildConfigField("String", "FIREBASE_API_KEY", "\"${firebaseProperty("FIREBASE_API_KEY")}\"")
         buildConfigField("String", "FIREBASE_APP_ID", "\"${firebaseProperty("FIREBASE_APP_ID")}\"")
         buildConfigField("String", "FIREBASE_PROJECT_ID", "\"${firebaseProperty("FIREBASE_PROJECT_ID")}\"")
+        // Generated from the same version-catalog entry used by the packaged runtime dependency.
+        buildConfigField("String", "LITERT_LM_VERSION", "\"${libs.versions.litertLm.get()}\"")
     }
 
     packaging {
