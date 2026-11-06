@@ -89,7 +89,8 @@ class LiteRtLmModelDownloadManager @Inject constructor(
     suspend fun getState(modelId: String): ModelDownloadState = withContext(Dispatchers.IO) {
         val definition = LocalModelCatalog.get(modelId)
         if (isInstalled(modelId)) return@withContext ModelDownloadState(
-            ModelDownloadStatus.INSTALLED, totalBytes = definition.sizeBytes
+            ModelDownloadStatus.INSTALLED, totalBytes = definition.sizeBytes,
+            message = if (definition.sha256 != null) "SHA-256 verified" else "Installed without checksum verification"
         )
 
         val id = preferences.getLong(KEY_DOWNLOAD_ID, INVALID_DOWNLOAD_ID)
@@ -136,7 +137,7 @@ class LiteRtLmModelDownloadManager @Inject constructor(
     fun isInstalled(modelId: String): Boolean {
         val definition = LocalModelCatalog.get(modelId)
         val file = installedFile(definition)
-        return file.isFile && file.length() == definition.sizeBytes &&
+        return file.isFile && (definition.expectedSizeBytes == null || file.length() == definition.expectedSizeBytes) &&
             preferences.getBoolean(KEY_VERIFIED, false) &&
             preferences.getString(KEY_ACTIVE_MODEL_ID, LocalModelCatalog.DEFAULT_MODEL_ID) == modelId
     }
@@ -155,20 +156,37 @@ class LiteRtLmModelDownloadManager @Inject constructor(
 
     private suspend fun verifyAndInstall(id: Long, definition: LocalModelDefinition): ModelDownloadState {
         val source = temporaryFile(definition.id)
-        if (!source.isFile || source.length() != definition.sizeBytes) {
+        if (!source.isFile) {
             downloadManager.remove(id)
             clearDownload()
-            return failed("Downloaded file size did not match the published model artifact.", definition.sizeBytes)
+            return failed("The downloaded model file is missing.", definition.sizeBytes)
+        }
+        definition.expectedSizeBytes?.let { expected ->
+            if (source.length() != expected) {
+                source.delete()
+                downloadManager.remove(id)
+                clearDownload()
+                return failed("Downloaded file size did not match the exact published artifact size.", definition.sizeBytes)
+            }
         }
 
         val expectedHash = definition.sha256
-            ?: return failed("This model has no verified checksum and cannot be installed safely.", definition.sizeBytes)
-        val actualHash = sha256(source)
-        if (!actualHash.equals(expectedHash, ignoreCase = true)) {
-            source.delete()
-            downloadManager.remove(id)
-            clearDownload()
-            return failed("Model integrity verification failed. The downloaded file was discarded.", definition.sizeBytes)
+        if (expectedHash != null) {
+            if (!expectedHash.matches(Regex("(?i)^[a-f0-9]{64}$"))) {
+                source.delete()
+                downloadManager.remove(id)
+                clearDownload()
+                return failed("The catalogue checksum is malformed. The downloaded file was discarded.", definition.sizeBytes)
+            }
+            val actualHash = sha256(source)
+            if (!actualHash.equals(expectedHash, ignoreCase = true)) {
+                source.delete()
+                downloadManager.remove(id)
+                clearDownload()
+                return failed("Model integrity verification failed. The downloaded file was discarded.", definition.sizeBytes)
+            }
+        } else {
+            Log.w(TAG, "Installing experimental model ${definition.id} without checksum verification")
         }
 
         val destination = installedFile(definition)
@@ -196,7 +214,11 @@ class LiteRtLmModelDownloadManager @Inject constructor(
         }
         downloadManager.remove(id)
         Log.i(TAG, "Installed and SHA-256 verified ${definition.displayName}")
-        return ModelDownloadState(ModelDownloadStatus.INSTALLED, totalBytes = definition.sizeBytes)
+        return ModelDownloadState(
+            ModelDownloadStatus.INSTALLED,
+            totalBytes = definition.sizeBytes,
+            message = if (expectedHash != null) "SHA-256 verified" else "Installed without checksum verification",
+        )
     }
 
     private fun requireDownloadableModel(modelId: String): LocalModelDefinition {
