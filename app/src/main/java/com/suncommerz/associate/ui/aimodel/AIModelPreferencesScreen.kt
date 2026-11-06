@@ -106,7 +106,7 @@ fun AIModelPreferencesScreen(
                         )
                     } else {
                         Text(
-                            "Downloaded and integrity-verified, but not yet validated for AI Pickup tool calling. It cannot be selected as the active backend yet.",
+                            "Downloaded, but not yet validated for AI Pickup tool calling. Checksum verification status is shown in the model entry; this model cannot be selected as the active backend yet.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error,
                         )
