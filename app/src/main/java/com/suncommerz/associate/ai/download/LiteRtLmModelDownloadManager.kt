@@ -213,7 +213,7 @@ class LiteRtLmModelDownloadManager @Inject constructor(
             LocalModelCatalog.models.firstOrNull { it.id == oldId }?.let(::installedFile)?.delete()
         }
         downloadManager.remove(id)
-        Log.i(TAG, "Installed and SHA-256 verified ${definition.displayName}")
+        Log.i(TAG, "Installed experimental model ${definition.displayName}; checksum verified=${expectedHash != null}")
         return ModelDownloadState(
             ModelDownloadStatus.INSTALLED,
             totalBytes = definition.sizeBytes,
