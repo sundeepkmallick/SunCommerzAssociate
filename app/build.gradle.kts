@@ -17,9 +17,7 @@ android {
 
     val localProperties = Properties().apply {
         val file = rootProject.file("local.properties")
-        if (file.exists()) {
-            file.inputStream().use { load(it) }
-        }
+        if (file.exists()) file.inputStream().use { load(it) }
     }
 
     fun firebaseProperty(name: String): String =
@@ -31,12 +29,12 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
         buildConfigField("String", "FIREBASE_API_KEY", "\"${firebaseProperty("FIREBASE_API_KEY")}\"")
         buildConfigField("String", "FIREBASE_APP_ID", "\"${firebaseProperty("FIREBASE_APP_ID")}\"")
         buildConfigField("String", "FIREBASE_PROJECT_ID", "\"${firebaseProperty("FIREBASE_PROJECT_ID")}\"")
+        // Generated from the same version-catalog entry used by the packaged runtime dependency.
+        buildConfigField("String", "LITERT_LM_VERSION", "\"${libs.versions.litertLm.get()}\"")
     }
 
     packaging {
@@ -47,11 +45,7 @@ android {
     }
 
     buildTypes {
-        release {
-            optimization {
-                enable = false
-            }
-        }
+        release { optimization { enable = false } }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -61,6 +55,10 @@ android {
         compose = true
         buildConfig = true
     }
+}
+
+ksp {
+    arg("appfunctions:aggregateAppFunctions", "true")
 }
 
 dependencies {
@@ -89,21 +87,21 @@ dependencies {
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     ksp(libs.hilt.compiler)
 
-    //Google Agent Development Kit
+    // ADK supports the same pickup tool set on LiteRT-LM and Firebase.
     implementation(libs.google.adk.kotlin.core.android)
+    implementation(libs.google.adk.kotlin.litertlm.android)
+    implementation(libs.google.ai.edge.litertlm.android)
     implementation(libs.google.adk.kotlin.firebase.android)
     ksp(libs.google.adk.kotlin.processor)
 
-    // LiteRT-LM runtime
-    implementation(libs.google.adk.kotlin.litertlm.android)
-    //implementation(libs.litertlm)
+    // Gemini Nano Agent API and Android AppFunctions tool runtime.
+    implementation(libs.mlkit.genai.agent)
+    implementation(libs.mlkit.genai.prompt)
+    implementation(libs.androidx.appfunctions)
+    ksp(libs.androidx.appfunctions.compiler)
 
-    // Firebase AI Logic (cloud Gemini backend for ADK)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.ai)
     implementation(libs.firebase.appcheck.debug)
-
-    //Serialization
     implementation(libs.kotlinx.serialization.json)
-
 }

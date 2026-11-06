@@ -38,7 +38,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.time.Clock
 
-const val NEARBY_STORE_RADIUS = 3.00
+const val NEARBY_STORE_RADIUS = 3_000.0
 const val MIN_QUANTITY_TO_INDICATE_LOW = 2
 
 

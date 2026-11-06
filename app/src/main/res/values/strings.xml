@@ -4,9 +4,11 @@
     <string name="screen_order">ORDER</string>
     <string name="screen_order_item">ORDERITEM</string>
     <string name="screen_ai_pickup">AIPICKUP</string>
+    <string name="screen_ai_model_preferences">AI MODEL PREFERENCES</string>
     <string name="back_button">Back</string>
+    <string name="open_ai_model_preferences">Open AI model preferences</string>
     <string name="order_items_label">%s items</string>
-    <string name="content_description_icon_right_arrow">Rigth Arrow</string>
+    <string name="content_description_icon_right_arrow">Right Arrow</string>
     <string name="filter_none">All</string>
     <string name="button_pick_using_ai">PICK USING AI</string>
     <string name="screen_title_dashboard">Associate Dashboard</string>

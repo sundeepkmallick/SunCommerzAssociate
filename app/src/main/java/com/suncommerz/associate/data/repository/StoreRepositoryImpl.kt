@@ -32,12 +32,17 @@ class StoreRepositoryImpl @Inject constructor(val apiResponse: FakeBackendApiRes
         locationCurrentStore: Coordinate,
         radiusMeters: Double
     ): List<Store> {
-        val storesDto: List<StoreDto> = apiResponse.stores.value.filter { storeDtos ->
-            val distance = calculateDistance(locationCurrentStore,  storeDtos.toDomain().location)
-            distance <= radiusMeters
-        }
-
-        return storesDto.map { it.toDomain() }
+        // Android Location.distanceBetween returns metres. Keep the repository
+        // contract in metres and order candidates nearest-first for deterministic
+        // manual and AI fulfilment selection.
+        return apiResponse.stores.value
+            .map { storeDto ->
+                val store = storeDto.toDomain()
+                store to calculateDistance(locationCurrentStore, store.location)
+            }
+            .filter { (_, distanceMeters) -> distanceMeters <= radiusMeters }
+            .sortedBy { (_, distanceMeters) -> distanceMeters }
+            .map { (store, _) -> store }
     }
 
     fun calculateDistance(
@@ -54,6 +59,6 @@ class StoreRepositoryImpl @Inject constructor(val apiResponse: FakeBackendApiRes
             result
         )
 
-        return result[0]/1000
+        return result[0]
     }
 }
