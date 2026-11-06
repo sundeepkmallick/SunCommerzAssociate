@@ -128,7 +128,7 @@ class LiteRtLmModelDownloadManager @Inject constructor(
         val activeId = preferences.getString(KEY_ACTIVE_MODEL_ID, LocalModelCatalog.DEFAULT_MODEL_ID)
             ?: LocalModelCatalog.DEFAULT_MODEL_ID
         LocalModelCatalog.models.forEach { model -> installedFile(model).delete() }
-        preferences.edit().remove(KEY_VERIFIED).remove(KEY_ACTIVE_MODEL_ID).apply()
+        preferences.edit().remove(KEY_INSTALL_ACCEPTED).remove(KEY_ACTIVE_MODEL_ID).apply()
         Log.i(TAG, "Removed installed LiteRT-LM model $activeId")
     }
 
@@ -138,7 +138,7 @@ class LiteRtLmModelDownloadManager @Inject constructor(
         val definition = LocalModelCatalog.get(modelId)
         val file = installedFile(definition)
         return file.isFile && (definition.expectedSizeBytes == null || file.length() == definition.expectedSizeBytes) &&
-            preferences.getBoolean(KEY_VERIFIED, false) &&
+            preferences.getBoolean(KEY_INSTALL_ACCEPTED, false) &&
             preferences.getString(KEY_ACTIVE_MODEL_ID, LocalModelCatalog.DEFAULT_MODEL_ID) == modelId
     }
 
@@ -206,7 +206,7 @@ class LiteRtLmModelDownloadManager @Inject constructor(
             .remove(KEY_DOWNLOAD_MODEL_ID)
             .remove(KEY_FAILURE)
             .putString(KEY_ACTIVE_MODEL_ID, definition.id)
-            .putBoolean(KEY_VERIFIED, true)
+            .putBoolean(KEY_INSTALL_ACCEPTED, true)
             .apply()
         backup.delete()
         previousId?.takeIf { it != definition.id }?.let { oldId ->
@@ -304,7 +304,7 @@ class LiteRtLmModelDownloadManager @Inject constructor(
         const val PREFERENCES_NAME = "litert_lm_download"
         const val KEY_DOWNLOAD_ID = "download_id"
         const val KEY_DOWNLOAD_MODEL_ID = "download_model_id"
-        const val KEY_VERIFIED = "verified"
+        const val KEY_INSTALL_ACCEPTED = "verified"
         const val KEY_FAILURE = "failure"
         const val KEY_ACTIVE_MODEL_ID = "active_model_id"
         const val INVALID_DOWNLOAD_ID = -1L
