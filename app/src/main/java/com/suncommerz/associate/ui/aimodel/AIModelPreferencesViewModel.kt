@@ -75,7 +75,9 @@ class AIModelPreferencesViewModel @Inject constructor(
         val usable = when (backend) {
             AIBackend.FIREBASE -> true
             AIBackend.GEMINI_NANO -> state.nanoAvailable == true
-            AIBackend.LITERT_LM -> state.installedLocalModelId != null
+            AIBackend.LITERT_LM -> state.installedLocalModelId?.let { id ->
+                LocalModelCatalog.get(id).pickupAgentValidated
+            } == true
         }
         if (!usable) return
         preferences.setPreferredBackend(backend)
