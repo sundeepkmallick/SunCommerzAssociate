@@ -8,7 +8,7 @@ The first-install default is **Firebase ADK**. In the app bar, open **AI Model P
 
 - **Firebase ADK** — cloud backend and application fallback.
 - **Gemini Nano** — Android/AICore-managed on-device model. The app checks ML Kit GenAI feature status and does not download or manage Gemini Nano weights.
-- **LiteRT-LM** — optional local model runtime. The selected artifact is downloaded and verified by this app.
+- **LiteRT-LM** — optional local model runtime. The selected artifact is downloaded and integrity-checked when exact size/checksum metadata is available.
 
 If the selected local backend is unavailable or fails to initialize/produce a valid pickup action, the dispatcher uses Firebase ADK for that invocation. The preference remains unchanged so the associate can decide whether to switch it.
 
@@ -44,7 +44,7 @@ Confirm the upstream revision/checksum again before changing the pinned artifact
 - The settings screen reports transfer progress and status when reopened. A failed download can be retried; an in-progress download can be cancelled.
 - The app uses the catalogue size estimate plus 512 MiB as a conservative free-storage check. Because estimates may be rounded, Android may still report insufficient space during transfer.
 - The model is downloaded to a temporary file. Exact byte size is checked only when `expectedSizeBytes` is recorded. SHA-256 is checked when a valid checksum is available. If no checksum is published, the model is installed as **unverified** and the UI says so; this is experimental and should not be treated as trusted for production.
-- A replacement is staged only after verification. The currently installed model is retained if the replacement download or integrity check fails. After successful activation, the previous model file is deleted.
+- A replacement is staged after the available integrity checks complete. The currently installed model is retained if the replacement download or an available integrity check fails. If no checksum is published, installation is explicitly marked unverified. After successful activation, the previous model file is deleted.
 - The LiteRT-LM engine is released before a model file is replaced or removed.
 - Only one local model is retained after a successful replacement. The app may temporarily need space for both the existing and replacement model during download.
 - Removing the installed model switches a LiteRT-LM preference back to Firebase ADK.
@@ -99,14 +99,14 @@ The preferences screen lists ten candidates. Associates can select an entry to i
 | Model | Approx. bundle size | Type | Availability |
 |---|---:|---|---|
 | Gemma 4 E2B IT | 2,583 MB | Chat | Downloadable; exact artifact pinned and BOPIS validated |
-| Gemma 4 E4B IT | 3,654 MB | Chat | Listed; artifact and BOPIS validation pending |
+| Gemma 4 E4B IT | 3,654 MB | Chat | Experimental download; runtime and BOPIS validation pending |
 | Gemma 3n E2B | 2,965 MB | Chat | Listed; artifact and BOPIS validation pending |
 | Gemma 3n E4B | 4,235 MB | Chat | Listed; artifact and BOPIS validation pending |
-| Gemma 3 1B | 1,005 MB | Chat | Listed; artifact and BOPIS validation pending |
+| Gemma 3 1B | 584 MB | Chat | Experimental mirror download; provenance and BOPIS validation pending |
 | FunctionGemma | 289 MB | Base/function model | Experimental; separate tool-calling evaluation required |
-| Phi-4 Mini | 3,906 MB | Chat | Listed; artifact and BOPIS validation pending |
-| Qwen2.5 1.5B | 1,598 MB | Chat | Listed; artifact and BOPIS validation pending |
-| Qwen3 0.6B | 586 MB | Chat | Google Android guidance demonstrates a CPU/GPU artifact with LiteRT-LM 0.18.0; app ADK compatibility pending |
+| Phi-4 Mini | 3,906 MB | Chat | Experimental download; runtime and BOPIS validation pending |
+| Qwen2.5 1.5B | 1,598 MB | Chat | Experimental download; runtime and BOPIS validation pending |
+| Qwen3 0.6B | 586 MB | Chat | Experimental download; Google Android guidance references LiteRT-LM 0.18.0; app ADK compatibility pending |
 | Qwen2.5 0.5B | 521 MB | Chat | Listed; artifact and BOPIS validation pending |
 
 Sizes are approximate published bundle sizes, not peak memory requirements. Google's benchmark results are tied to particular phones and execution backends; they are reference points, not universal minimum hardware specifications. Exact artifact ABI, Android API, available RAM, runtime cache, and device performance must be measured before enabling a model for download.
