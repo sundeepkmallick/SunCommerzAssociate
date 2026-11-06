@@ -56,6 +56,32 @@ The Gemma model is stored in the app-specific external files directory:
 
 The current Gemma runtime performs conservative device checks before initialization: Android 8+, arm64, not classified as low-RAM, at least 8 GiB total RAM, at least 3 GiB currently available, and 512 MiB free runtime-cache space. These are application guardrails, not official universal hardware guarantees. The ADK factory is model-agnostic; model-specific admission requirements belong in catalogue metadata and validation, not in pickup-agent instructions or tool logic.
 
+## Runtime-version compatibility gate
+
+The app generates `BuildConfig.LITERT_LM_VERSION` from the `litertLm` version-catalog entry in `gradle/libs.versions.toml`. This is the same version used by the `google-ai-edge-litertlm-android` dependency, so the Preferences screen does not rely on a separately maintained version string.
+
+Each catalogue entry can declare:
+- `minimumLiteRtLmVersion`: the minimum version documented or tested for that exact artifact.
+- `maximumTestedLiteRtLmVersion`: the highest runtime version tested with this app integration. When set, a newer version is blocked until revalidated.
+- Exact artifact URL, byte size and SHA-256.
+- Independent ADK and BOPIS validation flags.
+
+The download gate is enforced in the Preferences UI, ViewModel, and download manager. A model must have a pinned URL, positive exact byte size, a 64-character SHA-256, and pass the semantic-version check. Selecting a catalogue entry does not itself make it downloadable. The screen displays the packaged runtime version and the reason a download is unavailable.
+
+Gemma 4 E2B IT is currently limited to the app-tested 0.13.1 integration. Qwen3 0.6B records Google's 0.18.0 runtime guidance, but remains non-downloadable because its exact pinned artifact metadata and this app's ADK/BOPIS integration are not yet validated. Updating the Gradle runtime alone will not enable Qwen3.
+
+## Model compatibility research without downloading weights
+
+Most initial compatibility research can be performed without downloading multi-gigabyte model files:
+1. Inspect the publisher's model card and immutable repository revision for a real `.litertlm` artifact, file name, file size, license and documented target.
+2. Inspect Google's LiteRT-LM supported-model list, release notes, and the artifact's model configuration/metadata. LiteRT-LM model-inspection tooling can report model metadata and requirements when supported.
+3. Check the exact LiteRT-LM runtime API and Android artifact used by this project.
+4. Check the exact Google ADK LiteRT-LM adapter version and its declared runtime dependencies.
+5. Run a small import/load/inference test on a controlled Android test device or emulator with the exact artifact/runtime pair. This step requires the model file, but can be performed by CI/device-lab automation rather than manually on every associate's phone.
+6. Separately run ADK tool-calling tests and the app's BOPIS acceptance scenarios. A successful model load does not establish tool-call correctness.
+
+Record tested combinations as a matrix of artifact revision × LiteRT-LM version × Android ABI/device × ADK adapter version. Do not infer compatibility for every version in a family from one model card or one benchmark.
+
 ## Build and validation
 
 - The app currently pins LiteRT-LM 0.13.1 for its ADK integration. Do not upgrade this dependency without checking the ADK adapter compatibility and rebuilding.
