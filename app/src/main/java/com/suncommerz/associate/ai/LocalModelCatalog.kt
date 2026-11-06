@@ -21,6 +21,8 @@ data class LocalModelDefinition(
     val sha256: String?,
     /** Null means the minimum version for the exact artifact has not been verified. */
     val minimumLiteRtLmVersion: String?,
+    /** Highest version explicitly tested for this exact artifact in this app; null means no upper bound recorded. */
+    val maximumTestedLiteRtLmVersion: String? = null,
     val runtimeCompatibilityNote: String,
     val deviceCompatibilityNote: String,
     val licenseNote: String,
@@ -67,7 +69,8 @@ object LocalModelCatalog {
             downloadUrl = "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/6b78abd019e61a1ca4cbe3b212d2c9ce8ff38a94/gemma-4-E2B-it.litertlm",
             sizeBytes = 2_588_147_712L,
             sha256 = "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c",
-            minimumLiteRtLmVersion = "0.13.1 (this pinned app artifact)",
+            minimumLiteRtLmVersion = "0.13.1",
+            maximumTestedLiteRtLmVersion = "0.13.1",
             runtimeCompatibilityNote = "Verified with this app's LiteRT-LM 0.13.1 and ADK integration.",
             deviceCompatibilityNote = "App admission guardrails: Android API 26+, arm64, at least 8 GiB total RAM, 3 GiB currently available RAM, and 512 MiB free runtime-cache space. These are conservative app checks, not universal Google hardware guarantees.",
             licenseNote = "Gemma terms apply; review the upstream model card and terms before redistribution.",
@@ -251,8 +254,8 @@ object LocalModelCatalog {
             downloadUrl = null,
             sizeBytes = 0L,
             sha256 = null,
-            minimumLiteRtLmVersion = "0.18.0+ (Google Android guidance example; exact artifact revision must be pinned)",
-            runtimeCompatibilityNote = "Google Android guidance demonstrates the CPU/GPU Qwen3-0.6B.litertlm candidate with LiteRT-LM 0.18.0. This app ADK adapter compatibility still needs a build and integration test.",
+            minimumLiteRtLmVersion = "0.18.0",
+            runtimeCompatibilityNote = "Google Android guidance demonstrates the standard CPU/GPU Qwen3-0.6B.litertlm artifact with LiteRT-LM 0.18.0. This is runtime guidance, not confirmation that this app's ADK adapter or BOPIS tools work with it.",
             deviceCompatibilityNote = "Google published a Qwen3-0.6B example benchmark on Vivo X300 Pro. This is a reference device, not a minimum requirement; check RAM, ABI, and performance on target handsets.",
             licenseNote = "The upstream Qwen3 model card lists Apache-2.0; verify the selected converted artifact's license and notices.",
             downloadable = false,
@@ -289,6 +292,53 @@ object LocalModelCatalog {
         ),
     )
 
+    /**
+     * Conservative semantic-version gate. A model with no verified minimum version is
+     * informational only. A recorded upper tested version blocks unverified newer runtimes.
+     */
+    fun isRuntimeCompatible(model: LocalModelDefinition, runtimeVersion: String): Boolean {
+        val runtime = parseVersion(runtimeVersion) ?: return false
+        val minimum = model.minimumLiteRtLmVersion?.let(::parseVersion) ?: return false
+        if (runtime < minimum) return false
+        val maximum = model.maximumTestedLiteRtLmVersion?.let(::parseVersion)
+        return maximum == null || runtime <= maximum
+    }
+
+    fun canDownload(model: LocalModelDefinition, runtimeVersion: String): Boolean =
+        model.downloadable && !model.downloadUrl.isNullOrBlank() && model.sizeBytes > 0L &&
+            model.sha256?.matches(Regex("(?i)^[a-f0-9]{64}$")) == true &&
+            isRuntimeCompatible(model, runtimeVersion)
+
+    fun downloadBlockReason(model: LocalModelDefinition, runtimeVersion: String): String {
+        if (!model.downloadable || model.downloadUrl.isNullOrBlank() || model.sizeBytes <= 0L ||
+            model.sha256?.matches(Regex("(?i)^[a-f0-9]{64}$")) != true
+        ) return model.availabilityStatusNote
+        val minimum = model.minimumLiteRtLmVersion
+            ?: return "The minimum LiteRT-LM version for this exact artifact has not been verified."
+        val runtime = parseVersion(runtimeVersion)
+            ?: return "The app LiteRT-LM version ($runtimeVersion) could not be parsed."
+        val required = parseVersion(minimum)
+            ?: return "The model minimum LiteRT-LM version ($minimum) is not recorded in a supported format."
+        if (runtime < required) return "This app packages LiteRT-LM $runtimeVersion; this model requires $minimum or newer."
+        val maximum = model.maximumTestedLiteRtLmVersion?.let(::parseVersion)
+        if (maximum != null && runtime > maximum) {
+            return "This app packages LiteRT-LM $runtimeVersion; this exact artifact has only been tested through " +
+                model.maximumTestedLiteRtLmVersion + ". Revalidate it before downloading."
+        }
+        return "Runtime requirement passes for LiteRT-LM $runtimeVersion. ADK adapter and BOPIS tool-calling validation are separate checks."
+    }
+
+    private data class Version(val major: Int, val minor: Int, val patch: Int) : Comparable<Version> {
+        override fun compareTo(other: Version): Int =
+            compareValuesBy(this, other, Version::major, Version::minor, Version::patch)
+    }
+
+    private fun parseVersion(value: String): Version? {
+        val match = Regex("^\\s*(\\d+)\\.(\\d+)\\.(\\d+)").find(value) ?: return null
+        return runCatching {
+            Version(match.groupValues[1].toInt(), match.groupValues[2].toInt(), match.groupValues[3].toInt())
+        }.getOrNull()
+    }
     fun get(modelId: String): LocalModelDefinition =
         requireNotNull(models.firstOrNull { it.id == modelId }) { "Unknown local model: $modelId" }
 }
