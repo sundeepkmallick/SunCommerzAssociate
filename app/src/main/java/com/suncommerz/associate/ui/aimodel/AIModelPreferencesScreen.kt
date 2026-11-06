@@ -214,8 +214,9 @@ private fun LocalModelCard(
                 Text("LiteRT-LM: ${model.minimumLiteRtLmVersion ?: "Exact minimum version not verified"}" +
                     (model.maximumTestedLiteRtLmVersion?.let { " (tested through $it)" } ?: ""), style = MaterialTheme.typography.bodySmall)
                 Text(
-                    if (installed) "Installed and verified"
-                    else if (!LocalModelCatalog.canDownload(model, runtimeVersion)) "Listed · download unavailable"
+                    if (installed && model.sha256 != null) "Installed · SHA-256 verified"
+                    else if (installed) "Installed · checksum not available"
+                    else if (!LocalModelCatalog.canDownload(model, runtimeVersion)) "Listed · no downloadable artifact"
                     else when (download) {
                         ModelDownloadStatus.QUEUED -> "Download queued"
                         ModelDownloadStatus.DOWNLOADING -> "Downloading"
