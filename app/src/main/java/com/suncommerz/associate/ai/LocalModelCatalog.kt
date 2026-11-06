@@ -228,7 +228,7 @@ object LocalModelCatalog {
             description = "Instruction-tuned chat model with a mid-sized mobile footprint.",
             approximateSizeMb = 1_598,
             artifactFileName = "Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.litertlm",
-            downloadUrl = null,
+            downloadUrl = "https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/19edb84/Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.litertlm",
             sizeBytes = 1_597_931_520L,
             sha256 = "faa60663b333290c1496c499828b21d3e3254a788cacd8cce917ce0f761a2dc9",
             minimumLiteRtLmVersion = null,
@@ -242,7 +242,7 @@ object LocalModelCatalog {
             minimumTotalRamBytes = null,
             minimumAvailableRamBytes = null,
             minimumRuntimeCacheBytes = null,
-            availabilityStatusNote = "SHA-256 and byte size are recorded from the artifact pointer, but the immutable file revision is not confirmed. LiteRT-LM minimum version, device requirements, ADK integration, and BOPIS tool-calling validation remain unverified; download stays disabled.",
+            availabilityStatusNote = "Artifact URL is pinned to the verified Hugging Face file revision 19edb84; exact byte size and SHA-256 are recorded. LiteRT-LM minimum version, device requirements, ADK integration, and BOPIS tool-calling validation remain unverified; download stays disabled.",
         ),
         LocalModelDefinition(
             id = "qwen3-0.6b",
