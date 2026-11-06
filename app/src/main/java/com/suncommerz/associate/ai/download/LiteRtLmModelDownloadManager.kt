@@ -4,6 +4,7 @@ import android.app.DownloadManager
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import com.suncommerz.associate.BuildConfig
 import com.suncommerz.associate.ai.LocalModelCatalog
 import com.suncommerz.associate.ai.LocalModelDefinition
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -200,8 +201,8 @@ class LiteRtLmModelDownloadManager @Inject constructor(
 
     private fun requireDownloadableModel(modelId: String): LocalModelDefinition {
         val definition = LocalModelCatalog.get(modelId)
-        check(definition.downloadable && definition.downloadUrl != null && definition.sha256 != null) {
-            definition.availabilityNote
+        check(LocalModelCatalog.canDownload(definition, BuildConfig.LITERT_LM_VERSION)) {
+            LocalModelCatalog.downloadBlockReason(definition, BuildConfig.LITERT_LM_VERSION)
         }
         return definition
     }
