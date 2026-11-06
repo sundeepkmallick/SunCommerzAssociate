@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.suncommerz.associate.ai.AIBackend
+import com.suncommerz.associate.ai.LocalModelCatalog
 import com.suncommerz.associate.ai.LocalModelDefinition
 import com.suncommerz.associate.ai.download.ModelDownloadStatus
 
@@ -72,6 +73,7 @@ fun AIModelPreferencesScreen(
             )
 
             Text("LiteRT-LM local models", style = MaterialTheme.typography.titleLarge)
+            Text("App runtime: LiteRT-LM ${state.liteRtLmRuntimeVersion} (from the packaged Gradle dependency)", style = MaterialTheme.typography.bodySmall)
             Text(
                 "Choose any catalogue entry to review its specifications. Only models with a pinned, integrity-verified artifact and completed app validation can currently be downloaded. One local model is installed at a time; a verified replacement retires the previous model only after successful installation.",
                 style = MaterialTheme.typography.bodySmall,
@@ -88,7 +90,7 @@ fun AIModelPreferencesScreen(
             }
 
             val selectedModel = state.localModels.firstOrNull { it.id == state.selectedLocalModelId }
-            if (selectedModel != null && selectedModel.downloadable) {
+            if (selectedModel != null && LocalModelCatalog.canDownload(selectedModel, state.liteRtLmRuntimeVersion)) {
                 if (state.download.status == ModelDownloadStatus.INSTALLED &&
                     state.installedLocalModelId == selectedModel.id
                 ) {
@@ -199,10 +201,11 @@ private fun LocalModelCard(
                 Text(model.displayName, style = MaterialTheme.typography.titleMedium)
                 Text(model.description, style = MaterialTheme.typography.bodySmall)
                 Text("Approx. ${model.approximateSizeMb} MB", style = MaterialTheme.typography.labelMedium)
-                Text("LiteRT-LM: ${model.minimumLiteRtLmVersion ?: "Exact minimum version not verified"}", style = MaterialTheme.typography.bodySmall)
+                Text("LiteRT-LM: ${model.minimumLiteRtLmVersion ?: "Exact minimum version not verified"}" +
+                    (model.maximumTestedLiteRtLmVersion?.let { " (tested through $it)" } ?: ""), style = MaterialTheme.typography.bodySmall)
                 Text(
                     if (installed) "Installed and verified"
-                    else if (!model.downloadable) "Listed · download not enabled"
+                    else if (!LocalModelCatalog.canDownload(model, com.suncommerz.associate.BuildConfig.LITERT_LM_VERSION)) "Listed · download unavailable for this runtime/artifact"
                     else when (download) {
                         ModelDownloadStatus.QUEUED -> "Download queued"
                         ModelDownloadStatus.DOWNLOADING -> "Downloading"
