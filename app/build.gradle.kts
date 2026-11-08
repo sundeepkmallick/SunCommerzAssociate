@@ -62,6 +62,11 @@ ksp {
 }
 
 dependencies {
+    // SunMobileAiAgentSdk local composite-build modules (no published artifacts required).
+    implementation("com.sunmobile.aiagent:agent-core:0.1.0-SNAPSHOT")
+    implementation("com.sunmobile.aiagent:agent-adk:0.1.0-SNAPSHOT")
+    implementation("com.sunmobile.aiagent:agent-firebase:0.1.0-SNAPSHOT")
+    implementation("com.sunmobile.aiagent:agent-litertlm:0.1.0-SNAPSHOT")
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
