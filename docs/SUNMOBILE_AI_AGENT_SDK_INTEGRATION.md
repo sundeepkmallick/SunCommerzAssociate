@@ -47,7 +47,7 @@ The app's download manager remains responsible for artifact provenance, file siz
 
 ## CI and validation limits
 
-The workflow discovers the SDK Manager under `ANDROID_HOME/cmdline-tools` instead of relying on a globally exported `sdkmanager` command.
+The workflow discovers the SDK Manager under `ANDROID_HOME/cmdline-tools` instead of relying on a globally exported `sdkmanager` command. It installs the API 37.0 preview package (`platforms;android-37.0`), which is the SDK Manager package name for this API level.
 
 The Android workflow checks out the SDK submodule recursively and compiles/tests the app with a placeholder Firebase configuration. A green CI run proves compile/unit-test success only. It does not validate Firebase credentials, device AICore/Gemini Nano availability, local-model performance, or AppFunctions behavior.
 
