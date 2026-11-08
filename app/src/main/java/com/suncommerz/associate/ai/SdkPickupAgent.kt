@@ -41,7 +41,6 @@ class SdkPickupAgent @Inject constructor(
     private val findNearbyStoresWithProductUseCase: FindNearbyStoresWithProductUseCase,
     private val getSubstituteProductsUseCase: GetSubstituteProductsUseCase,
     private val isProductAvailableUseCase: IsProductAvailableUseCase,
-    private val appName: String = "SunCommerzAssociatePickup",
 ) {
     suspend fun run(
         modelFactory: com.sunmobile.aiagent.adk.AdkModelFactory,
@@ -114,7 +113,7 @@ class SdkPickupAgent @Inject constructor(
                 instructions = PickupAgentInstructions.SYSTEM,
                 maxTurns = 10,
             ))
-            .backend(AdkAgentBackendProvider(modelFactory, appName))
+            .backend(AdkAgentBackendProvider(modelFactory, "SunCommerzAssociatePickup"))
             .tools(registry)
             .policy(AgentPolicy { _, _, context ->
                 if (context.toolRiskLevel == ToolRiskLevel.READ_ONLY) {
