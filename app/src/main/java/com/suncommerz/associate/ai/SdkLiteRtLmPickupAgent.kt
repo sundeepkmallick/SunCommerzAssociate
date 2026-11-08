@@ -20,6 +20,9 @@ class SdkLiteRtLmPickupAgent @Inject constructor(
 ) {
     private val runtimeMutex = Mutex()
 
+    /** Wait until the current SDK turn has closed its native model before file replacement/removal. */
+    suspend fun awaitIdle() = runtimeMutex.withLock { Unit }
+
     suspend fun run(
         prompt: String,
         userId: String,

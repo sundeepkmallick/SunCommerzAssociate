@@ -7,6 +7,7 @@ import com.suncommerz.associate.ai.AIBackend
 import com.suncommerz.associate.ai.AIModelPreferencesStore
 import com.suncommerz.associate.ai.GeminiNanoPickupAgent
 import com.suncommerz.associate.ai.LocalModelCatalog
+import com.suncommerz.associate.ai.SdkLiteRtLmPickupAgent
 import com.suncommerz.associate.ai.LocalModelDefinition
 import com.suncommerz.associate.ai.download.LiteRtLmModelDownloadManager
 import com.suncommerz.associate.ai.download.ModelDownloadState
@@ -40,6 +41,7 @@ class AIModelPreferencesViewModel @Inject constructor(
     private val preferences: AIModelPreferencesStore,
     private val nanoAgent: GeminiNanoPickupAgent,
     private val downloadManager: LiteRtLmModelDownloadManager,
+    private val sdkLiteRtLmPickupAgent: SdkLiteRtLmPickupAgent,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(
         AIModelPreferencesUiState(
@@ -104,12 +106,13 @@ class AIModelPreferencesViewModel @Inject constructor(
             }
             _uiState.update { it.copy(isBusy = true, error = null) }
             runCatching {
-                // SDK agents are created and closed per turn, so no native engine remains
-                // resident while a replacement model is downloaded.
+                // Wait for any in-flight SDK turn to close its native engine before
+                // the download manager replaces the installed model file.
                 if (_uiState.value.installedLocalModelId != null &&
                     _uiState.value.installedLocalModelId != modelId
                 ) {
                     preferences.setPreferredBackend(AIBackend.FIREBASE)
+                    sdkLiteRtLmPickupAgent.awaitIdle()
                     _uiState.update { it.copy(preferredBackend = AIBackend.FIREBASE) }
                 }
                 downloadManager.enqueue(modelId, _uiState.value.mobileDataAllowed)
@@ -136,6 +139,7 @@ class AIModelPreferencesViewModel @Inject constructor(
                     preferences.setPreferredBackend(AIBackend.FIREBASE)
                     _uiState.update { it.copy(preferredBackend = AIBackend.FIREBASE) }
                 }
+                sdkLiteRtLmPickupAgent.awaitIdle()
                 downloadManager.removeInstalledModel()
             }.onSuccess {
                 _uiState.update {
