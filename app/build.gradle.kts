@@ -93,11 +93,6 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     // ADK supports the same pickup tool set on LiteRT-LM and Firebase.
-    implementation(libs.google.adk.kotlin.core.android)
-    implementation(libs.google.adk.kotlin.litertlm.android)
-    implementation(libs.google.ai.edge.litertlm.android)
-    implementation(libs.google.adk.kotlin.firebase.android)
-    ksp(libs.google.adk.kotlin.processor)
 
     // Gemini Nano Agent API and Android AppFunctions tool runtime.
     implementation(libs.mlkit.genai.agent)
