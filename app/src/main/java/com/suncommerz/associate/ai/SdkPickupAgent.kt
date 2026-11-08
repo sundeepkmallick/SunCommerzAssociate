@@ -1,7 +1,6 @@
 package com.suncommerz.associate.ai
 
 import com.sunmobile.aiagent.adk.AdkAgentBackendProvider
-import com.sunmobile.aiagent.adk.AdkModelFactory
 import com.sunmobile.aiagent.core.Agent
 import com.sunmobile.aiagent.core.AgentBuilder
 import com.sunmobile.aiagent.core.AgentConfiguration
@@ -29,14 +28,14 @@ import kotlinx.serialization.json.double
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.put
 import java.util.concurrent.ConcurrentHashMap
+import javax.inject.Inject
 
 /**
  * Host-owned BOPIS tool composition using the reusable SDK's ADK backend, registry,
  * schema validation and policy executor. The order/store/product scope is captured
  * from the authenticated host workflow; model-supplied identifiers cannot change it.
  */
-class SdkPickupAgent(
-    private val modelFactory: AdkModelFactory,
+class SdkPickupAgent @Inject constructor(
     private val inventoryRepository: InventoryRepository,
     private val storeRepository: StoreRepository,
     private val findNearbyStoresWithProductUseCase: FindNearbyStoresWithProductUseCase,
@@ -45,6 +44,7 @@ class SdkPickupAgent(
     private val appName: String = "SunCommerzAssociatePickup",
 ) {
     suspend fun run(
+        modelFactory: com.sunmobile.aiagent.adk.AdkModelFactory,
         prompt: String,
         userId: String,
         sessionId: String,
