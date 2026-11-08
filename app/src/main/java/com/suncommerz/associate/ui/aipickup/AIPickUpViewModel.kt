@@ -129,6 +129,10 @@ class AIPickUpViewModel @Inject constructor(
                         prompt = prompt,
                         userId = associate?.id.orEmpty(),
                         sessionId = sessionId,
+                        productId = item.product.id,
+                        currentStoreId = order.store.id,
+                        requestedQuantity = item.requestedQuantity,
+                        radiusMeters = NEARBY_STORE_RADIUS,
                     )
 
                     Log.d(
