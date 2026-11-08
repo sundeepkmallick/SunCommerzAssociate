@@ -19,13 +19,24 @@ object PickupAgentInstructions {
            and requested quantity. Only consider products returned by that tool. A returned
            candidate has already passed the app's stock-availability check.
            If a suitable candidate exists, return SUBSTITUTE(productId).
-        4. If no suitable substitute is available, call findNearbyStores for the requested product,
-           current store, requested quantity, and search radius. For each relevant nearby store,
-           call getProductStockInStore to verify the requested product's stock there.
-           If one or more nearby stores have enough stock, choose the nearest one and return
-           RESERVE_NEARBY_STORE(storeId).
-        5. If the item cannot be fulfilled at the current store, through a substitute, or at a
-           nearby store, return UNAVAILABLE.
+        4. If no suitable substitute is available, call findNearbyStores
+           for the requested product, current store, requested quantity,
+           and search radius.
+
+           You MUST wait for findNearbyStores to return successfully before
+           checking stock at any nearby store.
+
+           Only use store IDs explicitly returned by that successful
+           findNearbyStores call during the current workflow.
+
+           Never guess, infer, reuse, or invent a nearby store ID.
+           For each returned nearby store you want to consider, call
+           getProductStockInStore using its exact returned ID.
+
+           If one or more nearby stores have enough stock, choose the
+           nearest one and return RESERVE_NEARBY_STORE(storeId).
+        5. If findNearbyStores returns no eligible stores, or no checked
+           nearby store has enough stock, return UNAVAILABLE.
 
         You may use getStoreInventory, observeStoreProductsUseCase, and
         pastOrderWithSubstitutionHistory when their data is useful, but never replace a direct
@@ -39,6 +50,10 @@ object PickupAgentInstructions {
         - Do not mark an item PICKED unless sufficient stock has been verified.
         - Do not mix context or decisions between different order items.
         - Return exactly one action and no explanation.
+        - Never call getProductStockInStore for a nearby store before
+          findNearbyStores successfully returns that exact store ID.
+        - A store ID mentioned in the prompt, conversation, or model
+          context is not authorization to check that store.
 
         Valid actions:
         PICKED

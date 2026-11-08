@@ -1,7 +1,12 @@
 package com.suncommerz.associate.ai
 
+import android.util.Log
+import com.suncommerz.associate.domain.repository.InventoryRepository
+import com.suncommerz.associate.domain.repository.StoreRepository
+import com.suncommerz.associate.domain.usecase.inventory.IsProductAvailableUseCase
+import com.suncommerz.associate.domain.usecase.product.GetSubstituteProductsUseCase
+import com.suncommerz.associate.domain.usecase.store.FindNearbyStoresWithProductUseCase
 import com.sunmobile.aiagent.adk.AdkAgentBackendProvider
-import com.sunmobile.aiagent.core.Agent
 import com.sunmobile.aiagent.core.AgentBuilder
 import com.sunmobile.aiagent.core.AgentConfiguration
 import com.sunmobile.aiagent.core.AgentPolicy
@@ -12,19 +17,13 @@ import com.sunmobile.aiagent.core.ToolExecutionContext
 import com.sunmobile.aiagent.core.ToolRegistry
 import com.sunmobile.aiagent.core.ToolResult
 import com.sunmobile.aiagent.core.ToolRiskLevel
-import com.suncommerz.associate.domain.repository.InventoryRepository
-import com.suncommerz.associate.domain.repository.StoreRepository
-import com.suncommerz.associate.domain.usecase.inventory.IsProductAvailableUseCase
-import com.suncommerz.associate.domain.usecase.product.GetSubstituteProductsUseCase
-import com.suncommerz.associate.domain.usecase.store.FindNearbyStoresWithProductUseCase
 import kotlinx.coroutines.flow.first
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.double
 import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
@@ -63,6 +62,12 @@ class SdkPickupAgent @Inject constructor(
         ) { args, _ ->
             val requestedProduct = args.string("productId")
             val requestedStore = args.string("storeId")
+            Log.d(
+                "PickupToolDebug",
+                "Stock request: product=$requestedProduct, " +
+                        "store=$requestedStore, current=$currentStoreId, " +
+                        "authorized=${allowedStoreIds.toList()}"
+            )
             require(requestedProduct == productId) { "Only the current order product can be checked" }
             require(requestedStore in allowedStoreIds) { "Store was not authorized by the current pickup workflow" }
             val quantity = inventoryRepository.getAvailableQuantity(productId, requestedStore)
@@ -107,6 +112,10 @@ class SdkPickupAgent @Inject constructor(
                 radiusMeters = args.double("radiusMeters"),
             )
             allowedStoreIds.addAll(stores.map { it.id })
+            Log.d(
+                "PickupToolDebug",
+                "Nearby stores authorized: ${stores.map { it.id }}"
+            )
             Json.encodeToString(stores)
         })
 
@@ -132,7 +141,7 @@ class SdkPickupAgent @Inject constructor(
             })
             .build()
 
-        return try {
+        return agent.use { agent ->
             val result = agent.execute(AgentRequest(
                 prompt = prompt,
                 sessionId = sessionId,
@@ -141,17 +150,15 @@ class SdkPickupAgent @Inject constructor(
             check(result.toolInvocations.any { invocation ->
                 invocation.toolName.substringAfterLast('.')
                     .equals("getProductStockInStore", ignoreCase = true) &&
-                    (invocation.arguments as? JsonObject)?.let { args ->
-                        args["productId"]?.jsonPrimitive?.content == productId &&
-                            args["storeId"]?.jsonPrimitive?.content == currentStoreId
-                    } == true
+                        (invocation.arguments as? JsonObject)?.let { args ->
+                            args["productId"]?.jsonPrimitive?.content == productId &&
+                                    args["storeId"]?.jsonPrimitive?.content == currentStoreId
+                        } == true
             }) {
                 "SDK pickup agent did not verify current-store stock with getProductStockInStore"
             }
             check(!result.text.isNullOrBlank()) { "SDK pickup agent completed without an assistant response" }
             result.text!!.trim()
-        } finally {
-            agent.close()
         }
     }
 
