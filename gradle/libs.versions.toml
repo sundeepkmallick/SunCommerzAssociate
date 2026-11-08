@@ -21,6 +21,7 @@ googleServices = "4.5.0"
 mlkitGenaiAgent = "1.0.0-alpha1"
 mlkitGenaiPrompt = "1.0.0-beta5"
 appfunctions = "1.0.0-alpha13"
+# litertLm v0.13.1 is compatible with Gemma 4 E2B IT and Qwen2.5 1.5B Instruct
 litertLm = "0.13.1"
 
 [libraries]
