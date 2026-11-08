@@ -29,8 +29,8 @@ jobs:
           echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
           set +o pipefail
           yes | "$SDKMANAGER" --licenses
-      - name: Install Android API 37
-        run: sdkmanager --install "platforms;android-37"
+      - name: Install Android API 37.0
+        run: sdkmanager --install "platforms;android-37.0"
       - name: Provide non-production Firebase config for compile-only CI
         run: |
           cat > app/google-services.json <<'JSON'
