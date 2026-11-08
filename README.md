@@ -1,30 +1,58 @@
 # SunCommerz Associate
 
-An Android application for store associates managing **Buy Online, Pick Up In Store (BOPIS)** order fulfillment. The app guides associates through picking customer orders, resolving unavailable items, handling substitutions, and coordinating inventory issues.
+An Android application for store associates managing **Buy Online, Pick Up In Store (BOPIS)** order fulfillment. The app guides associates through picking customer orders, resolving unavailable items, handling substitutions, finding nearby-store inventory, and reporting inventory issues.
 
-> **Project status:** Setup requires Firebase configuration. AI features depend on the configured model provider and device/runtime support.
+> **Project status:** The AI Pickup implementation supports Firebase ADK, LiteRT-LM, and Gemini Nano backends. Availability depends on Firebase configuration, Android device support, and the selected local model.
 
 ## Features
 
 - **Pickup order workflow** — review orders and work through their items.
 - **Guided item picking** — record picked items and handle exceptions.
 - **Substitutions** — discover suitable substitute products and manage substitution decisions.
-- **Nearby-store fulfillment** — look for inventory at nearby stores when the current store cannot fulfill an item.
-- **Inventory issue reporting** — surface out-of-stock issues to store management.
+- **Nearby-store fulfillment** — find nearby stores with sufficient inventory when the current store cannot fulfill an item.
+- **Inventory issue reporting** — report unavailable and low-stock items to store management.
 - **Associate dashboard and notifications** — view work and receive relevant updates.
-- **AI-assisted pickup proposals** — an AI agent can reason over order items and read inventory/store data through tools. Associates review and approve proposed order changes; the AI should not silently commit the pickup.
+- **AI-assisted pickup proposals** — an agent evaluates fulfillment options using application tools. Associates review and approve proposals; AI does not silently commit order changes.
 
-## AI pickup agent
+## AI Pickup
 
-The AI pickup workflow uses Google's Agent Development Kit (ADK) for Kotlin and Firebase AI Logic. The agent can call application tools to look up product stock, store inventory, nearby stores, available substitute candidates, store products, and prior substitution history.
+AI Pickup uses a common `PickupAgent` interface with three backend implementations:
 
-Tool results are grounded in the app's repositories and domain use cases. Treat model output as a proposal: verify it and use the in-app associate approval flow before applying order changes.
+| Backend | Technology | Role |
+|---|---|---|
+| Firebase | Google ADK for Kotlin + Firebase AI Logic | Cloud model execution and fallback |
+| LiteRT-LM | Google ADK for Kotlin + LiteRT-LM | Locally downloaded on-device model |
+| Gemini Nano | ML Kit GenAI Agent API + Android AppFunctions | AICore-managed on-device model |
 
-### Model/provider notes
+Firebase and LiteRT-LM share the ADK agent factory and BOPIS tool set. Gemini Nano uses its separate ML Kit Agent API integration. The implementations share BOPIS instructions and equivalent application capabilities, but do not have identical underlying APIs or session lifecycles.
 
-The current main branch uses the Firebase-backed model provider. An on-device Gemini Nano path is being explored separately. Local model availability, device compatibility, tool support, and runtime behavior are platform-dependent. Do not assume every Android device can run Gemini Nano or that a device's consumer AI features expose an app-accessible model API.
+The associate selects a preferred backend in **AI Model Preferences**. If a preferred on-device backend is unavailable, fails, or returns an invalid pickup action, the app falls back to Firebase for that invocation. The preference itself is not silently changed.
 
-AI behavior may evolve as provider and agent implementations change. Review the AI implementation in the app source under the AI package.
+### Safety and fulfillment integrity
+
+The agent can read application data through tools for stock, store inventory, nearby stores, and substitute candidates. It returns one structured pickup action:
+
+- `PICKED`
+- `SUBSTITUTE(productId)`
+- `RESERVE_NEARBY_STORE(storeId)`
+- `UNAVAILABLE`
+
+The model response is only a proposal. The app independently checks current inventory and eligible fulfillment options before showing the proposal, then revalidates stock/options when the associate approves it. Existing domain use cases perform the actual order updates. Stale or invalid proposals are rejected rather than trusted.
+
+See [AI Pickup architecture](docs/AI_PICKUP_ARCHITECTURE.md) for the request flow, tool inventory, backend lifecycle details, and validation boundaries.
+
+## On-device model support
+
+The current LiteRT-LM catalogue contains two downloadable models validated by the project owner for this app's BOPIS tool-calling flow with LiteRT-LM **0.13.1**:
+
+- **Gemma 4 E2B IT**
+- **Qwen2.5 1.5B Instruct**
+
+Both entries include pinned artifact revisions, expected file sizes, and SHA-256 checksums. Device suitability is still model- and device-dependent; Gemma has explicit app admission guardrails, while Qwen device requirements need evaluation on each target device.
+
+Gemini Nano is provisioned by Android AICore. The app checks ML Kit GenAI availability and does not download or manage Gemini Nano weights. A supported Android version alone does not guarantee that Gemini Nano is available on a particular device.
+
+See [AI model preferences and on-device AI](docs/AI_PICKUP_LOCAL_MODEL.md) for model metadata, download/integrity behaviour, device checks, runtime compatibility, and testing guidance.
 
 ## Technology
 
@@ -35,6 +63,9 @@ AI behavior may evolve as provider and agent implementations change. Review the 
 - Clean Architecture-inspired presentation, domain, and data layers
 - Google ADK for Kotlin
 - Firebase AI Logic
+- LiteRT-LM
+- ML Kit GenAI Agent and Prompt APIs
+- Android AppFunctions
 - Kotlin Serialization
 - Gradle Version Catalog
 
@@ -43,9 +74,9 @@ AI behavior may evolve as provider and agent implementations change. Review the 
 - **Presentation/UI:** Compose screens and ViewModels manage UI state and interactions.
 - **Domain:** business entities, repository contracts, and use cases represent application rules.
 - **Data:** repository implementations, data sources, DTOs, and mappers handle data access.
-- **AI:** agent orchestration and model providers connect model output to domain tools. Keep tool operations constrained and use domain use cases for business mutations.
+- **AI:** backend adapters orchestrate model execution and expose BOPIS tools. Domain use cases remain the source of truth for fulfillment validation and mutations.
 
-This separation helps keep business rules independent of UI and model-provider details.
+The current AI package is application-specific. It is not yet a standalone, general-purpose Android agent SDK. BOPIS instructions, tool implementations, response formats, and approval logic belong to this application.
 
 ## Requirements
 
@@ -53,6 +84,8 @@ This separation helps keep business rules independent of UI and model-provider d
 - Android device or emulator meeting the configured minimum SDK (API 26).
 - A Firebase project configured for the application.
 - Firebase configuration values used by the Gradle build.
+- For LiteRT-LM: a compatible physical device, sufficient memory/storage, and an installed supported model artifact.
+- For Gemini Nano: a supported device and available ML Kit GenAI feature managed by AICore.
 
 The project currently configures compileSdk and targetSdk as 37. Use the SDK versions declared by the project rather than assuming an older Android SDK is sufficient.
 
@@ -83,10 +116,6 @@ The project currently configures compileSdk and targetSdk as 37. Use the SDK ver
 - [Screen recordings](docs/screenrecordings)
 - [Application flow diagram](docs/SunCommerz_flow_diagram_improvised_final.png)
 - [Screen flow](docs/SunCommerz_screen_flow.png)
-
-## Use case
-
-Retail customers place orders online for pickup at a store. Associates prepare orders by picking requested items. If an item is unavailable, the workflow can consider a substitute or another store, while inventory issues can be reported for follow-up. The app supports store operations while keeping associates in control of fulfillment decisions.
 
 ## Licensing and attribution
 
