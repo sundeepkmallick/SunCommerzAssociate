@@ -112,10 +112,11 @@ class AIModelPreferencesViewModel @Inject constructor(
                     _uiState.value.installedLocalModelId != modelId
                 ) {
                     preferences.setPreferredBackend(AIBackend.FIREBASE)
-                    sdkLiteRtLmPickupAgent.awaitIdle()
                     _uiState.update { it.copy(preferredBackend = AIBackend.FIREBASE) }
                 }
-                downloadManager.enqueue(modelId, _uiState.value.mobileDataAllowed)
+                sdkLiteRtLmPickupAgent.withModelMaintenance {
+                    downloadManager.enqueue(modelId, _uiState.value.mobileDataAllowed)
+                }
             }.onSuccess { state ->
                 _uiState.update { it.copy(download = state, isBusy = false) }
             }.onFailure { error ->
@@ -139,8 +140,9 @@ class AIModelPreferencesViewModel @Inject constructor(
                     preferences.setPreferredBackend(AIBackend.FIREBASE)
                     _uiState.update { it.copy(preferredBackend = AIBackend.FIREBASE) }
                 }
-                sdkLiteRtLmPickupAgent.awaitIdle()
-                downloadManager.removeInstalledModel()
+                sdkLiteRtLmPickupAgent.withModelMaintenance {
+                    downloadManager.removeInstalledModel()
+                }
             }.onSuccess {
                 _uiState.update {
                     it.copy(
