@@ -22,10 +22,10 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Accept Android SDK licenses
+        run: yes | sdkmanager --licenses
       - name: Install Android API 37
-        run: sdkmanager "platforms;android-37"
+        run: sdkmanager --install "platforms;android-37"
       - name: Provide non-production Firebase config for compile-only CI
         run: |
           cat > app/google-services.json <<'JSON'
