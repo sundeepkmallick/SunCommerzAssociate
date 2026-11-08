@@ -84,7 +84,7 @@ object LocalModelCatalog {
             minimumTotalRamBytes = 8L * 1024L * 1024L * 1024L,
             minimumAvailableRamBytes = 3L * 1024L * 1024L * 1024L,
             minimumRuntimeCacheBytes = 512L * 1024L * 1024L,
-            availabilityStatusNote = "Available now. Exact artifact revision, byte size, and SHA-256 are pinned. This is the only catalogue model currently verified for this app's BOPIS pickup-agent flow.",
+            availabilityStatusNote = "Available now. Exact artifact revision, byte size, and SHA-256 are pinned. Validated for this app's BOPIS pickup-agent flow with LiteRT-LM 0.13.1.",
         ),
         LocalModelDefinition(
             id = "qwen2.5-1.5b-instruct",
@@ -98,7 +98,7 @@ object LocalModelCatalog {
             expectedSizeBytes = 1_597_931_520L,
             sha256 = "faa60663b333290c1496c499828b21d3e3254a788cacd8cce917ce0f761a2dc9",
             minimumLiteRtLmVersion = "0.13.1",
-            runtimeCompatibilityNote = RUNTIME_NOT_YET_VERIFIED,
+            runtimeCompatibilityNote = "Verified with this app's LiteRT-LM 0.13.1 and ADK integration.",
             deviceCompatibilityNote = DEVICE_NOT_YET_VERIFIED,
             licenseNote = "Verify the exact model card and license for the LiteRT-LM conversion.",
             downloadable = true,
@@ -108,7 +108,7 @@ object LocalModelCatalog {
             minimumTotalRamBytes = null,
             minimumAvailableRamBytes = null,
             minimumRuntimeCacheBytes = null,
-            availabilityStatusNote = "Experimental download enabled. Artifact URL is pinned to file-upload revision 19edb84; exact byte size and SHA-256 are recorded. App runtime, ADK integration, device requirements, and BOPIS tool-calling validation remain unverified.",
+            availabilityStatusNote = "Available now. Artifact URL is pinned to file-upload revision 19edb84; exact byte size and SHA-256 are recorded. Validated for this app's BOPIS pickup-agent flow with LiteRT-LM 0.13.1. Device suitability should still be checked on each target device.",
         ),
     )
 
