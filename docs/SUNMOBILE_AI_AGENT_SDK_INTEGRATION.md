@@ -47,6 +47,8 @@ The app's download manager remains responsible for artifact provenance, file siz
 
 ## CI and validation limits
 
+The workflow discovers the SDK Manager under `ANDROID_HOME/cmdline-tools` instead of relying on a globally exported `sdkmanager` command.
+
 The Android workflow checks out the SDK submodule recursively and compiles/tests the app with a placeholder Firebase configuration. A green CI run proves compile/unit-test success only. It does not validate Firebase credentials, device AICore/Gemini Nano availability, local-model performance, or AppFunctions behavior.
 
 Before enabling for associates, test Firebase and LiteRT-LM on the app's supported devices, test Gemini Nano on eligible API 36+ devices, and run the regression cases in the SDK migration guide. Do not remove the legacy pickup classes until those checks and rollout telemetry are satisfactory.
