@@ -22,8 +22,13 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - name: Accept Android SDK licenses
-        run: yes | sdkmanager --licenses
+      - name: Locate Android SDK Manager and accept licenses
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
+          test -x "$SDKMANAGER"
+          echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
+          set +o pipefail
+          yes | "$SDKMANAGER" --licenses
       - name: Install Android API 37
         run: sdkmanager --install "platforms;android-37"
       - name: Provide non-production Firebase config for compile-only CI
