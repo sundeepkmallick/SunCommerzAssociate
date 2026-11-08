@@ -67,7 +67,11 @@ class SdkPickupAgent @Inject constructor(
             require(requestedProduct == productId) { "Only the current order product can be checked" }
             require(requestedStore in allowedStoreIds) { "Store was not authorized by the current pickup workflow" }
             val quantity = inventoryRepository.getAvailableQuantity(productId, requestedStore)
-            buildJsonObject {\n                put("productId", productId)\n                put("storeId", requestedStore)\n                put("availableQuantity", quantity)\n            }.toString()
+            buildJsonObject {
+                put("productId", productId)
+                put("storeId", requestedStore)
+                put("availableQuantity", quantity)
+            }.toString()
         })
         registry.register(tool(
             name = "getAvailableSubstitutes",
