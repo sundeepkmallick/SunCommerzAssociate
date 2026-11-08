@@ -139,8 +139,13 @@ class SdkPickupAgent @Inject constructor(
                 sessionId = sessionId,
                 metadata = mapOf("userId" to userId),
             ))
-            check(result.toolInvocations.any {
-                it.toolName.substringAfterLast('.').equals("getProductStockInStore", ignoreCase = true)
+            check(result.toolInvocations.any { invocation ->
+                invocation.toolName.substringAfterLast('.')
+                    .equals("getProductStockInStore", ignoreCase = true) &&
+                    (invocation.arguments as? JsonObject)?.let { args ->
+                        args["productId"]?.jsonPrimitive?.content == productId &&
+                            args["storeId"]?.jsonPrimitive?.content == currentStoreId
+                    } == true
             }) {
                 "SDK pickup agent did not verify current-store stock with getProductStockInStore"
             }
