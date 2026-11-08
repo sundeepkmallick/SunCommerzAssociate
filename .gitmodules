@@ -1,0 +1,4 @@
+[submodule "SunMobileAiAgentSdk"]
+	path = SunMobileAiAgentSdk
+	url = https://github.com/sundeepkmallick/SunMobileAiAgentSdk.git
+	branch = feature/agent-sdk-roadmap
