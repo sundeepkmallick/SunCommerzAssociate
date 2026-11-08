@@ -114,7 +114,12 @@ class SdkPickupAgent @Inject constructor(
         val agent = AgentBuilder()
             .configuration(AgentConfiguration(
                 name = "PickupOrchestrator",
-                instructions = PickupAgentInstructions.SYSTEM,
+                instructions = PickupAgentInstructions.SYSTEM.replace(
+                    "You may use getStoreInventory, observeStoreProductsUseCase, and\n" +
+                        "pastOrderWithSubstitutionHistory when their data is useful, but never replace a direct\n" +
+                        "stock check with assumptions.",
+                    "",
+                ),
                 maxTurns = 10,
             ))
             .backend(AdkAgentBackendProvider(modelFactory, "SunCommerzAssociatePickup"))
@@ -134,6 +139,11 @@ class SdkPickupAgent @Inject constructor(
                 sessionId = sessionId,
                 metadata = mapOf("userId" to userId),
             ))
+            check(result.toolInvocations.any {
+                it.toolName.substringAfterLast('.').equals("getProductStockInStore", ignoreCase = true)
+            }) {
+                "SDK pickup agent did not verify current-store stock with getProductStockInStore"
+            }
             check(!result.text.isNullOrBlank()) { "SDK pickup agent completed without an assistant response" }
             result.text!!.trim()
         } finally {
