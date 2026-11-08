@@ -67,7 +67,7 @@ class SdkPickupAgent @Inject constructor(
             require(requestedProduct == productId) { "Only the current order product can be checked" }
             require(requestedStore in allowedStoreIds) { "Store was not authorized by the current pickup workflow" }
             val quantity = inventoryRepository.getAvailableQuantity(productId, requestedStore)
-            """{"productId":"$productId","storeId":"$requestedStore","availableQuantity":$quantity}"""
+            buildJsonObject {\n                put("productId", productId)\n                put("storeId", requestedStore)\n                put("availableQuantity", quantity)\n            }.toString()
         })
         registry.register(tool(
             name = "getAvailableSubstitutes",
@@ -94,7 +94,7 @@ class SdkPickupAgent @Inject constructor(
             require(args.string("productId") == productId) { "Only the current order product can be searched" }
             require(args.string("currentStoreId") == currentStoreId) { "Current store is fixed by the order" }
             require(args.int("requestedQuantity") == requestedQuantity) { "Requested quantity is fixed by the order" }
-            require(args.double("radiusMeters") <= radiusMeters) { "Search radius cannot exceed the host workflow limit" }
+            require(args.double("radiusMeters") > 0.0 && args.double("radiusMeters") <= radiusMeters) { "Search radius must be positive and cannot exceed the host workflow limit" }
             val currentStore = storeRepository.getStore(currentStoreId).first()
                 ?: error("Current store no longer exists")
             val stores = findNearbyStoresWithProductUseCase(
