@@ -6,7 +6,6 @@ import com.suncommerz.associate.BuildConfig
 import com.suncommerz.associate.ai.AIBackend
 import com.suncommerz.associate.ai.AIModelPreferencesStore
 import com.suncommerz.associate.ai.GeminiNanoPickupAgent
-import com.suncommerz.associate.ai.LiteRtLmPickupAgent
 import com.suncommerz.associate.ai.LocalModelCatalog
 import com.suncommerz.associate.ai.LocalModelDefinition
 import com.suncommerz.associate.ai.download.LiteRtLmModelDownloadManager
@@ -41,7 +40,6 @@ class AIModelPreferencesViewModel @Inject constructor(
     private val preferences: AIModelPreferencesStore,
     private val nanoAgent: GeminiNanoPickupAgent,
     private val downloadManager: LiteRtLmModelDownloadManager,
-    private val liteRtLmPickupAgent: LiteRtLmPickupAgent,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(
         AIModelPreferencesUiState(
@@ -106,12 +104,12 @@ class AIModelPreferencesViewModel @Inject constructor(
             }
             _uiState.update { it.copy(isBusy = true, error = null) }
             runCatching {
-                // Release the current engine before a verified replacement can retire its file.
+                // SDK agents are created and closed per turn, so no native engine remains
+                // resident while a replacement model is downloaded.
                 if (_uiState.value.installedLocalModelId != null &&
                     _uiState.value.installedLocalModelId != modelId
                 ) {
                     preferences.setPreferredBackend(AIBackend.FIREBASE)
-                    liteRtLmPickupAgent.releaseModel()
                     _uiState.update { it.copy(preferredBackend = AIBackend.FIREBASE) }
                 }
                 downloadManager.enqueue(modelId, _uiState.value.mobileDataAllowed)
@@ -138,7 +136,6 @@ class AIModelPreferencesViewModel @Inject constructor(
                     preferences.setPreferredBackend(AIBackend.FIREBASE)
                     _uiState.update { it.copy(preferredBackend = AIBackend.FIREBASE) }
                 }
-                liteRtLmPickupAgent.releaseModel()
                 downloadManager.removeInstalledModel()
             }.onSuccess {
                 _uiState.update {

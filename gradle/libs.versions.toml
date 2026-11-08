@@ -16,7 +16,6 @@ composeBom = "2026.08.00"
 ksp = "2.3.6"
 materialIconsExtendedAndroid = "1.7.8"
 navigationCompose = "2.10.0"
-adk = "1.0.0"
 googleServices = "4.5.0"
 mlkitGenaiAgent = "1.0.0-alpha1"
 mlkitGenaiPrompt = "1.0.0-beta5"
@@ -50,10 +49,6 @@ androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
-google-adk-kotlin-core-android = { group = "com.google.adk", name = "google-adk-kotlin-core-android", version.ref = "adk" }
-google-adk-kotlin-processor = { group = "com.google.adk", name = "google-adk-kotlin-processor", version.ref = "adk" }
-google-adk-kotlin-firebase-android = { group = "com.google.adk", name = "google-adk-kotlin-firebase-android", version.ref = "adk" }
-google-adk-kotlin-litertlm-android = { group = "com.google.adk", name = "google-adk-kotlin-litertlm-android", version.ref = "adk" }
 google-ai-edge-litertlm-android = { module = "com.google.ai.edge.litertlm:litertlm-android", version.ref = "litertLm" }
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
