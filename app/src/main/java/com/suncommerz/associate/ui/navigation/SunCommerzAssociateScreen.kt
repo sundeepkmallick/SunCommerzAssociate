@@ -6,5 +6,6 @@ enum class SunCommerzAssociateScreen(val title: Int) {
     Start(title = R.string.screen_dashbaord),
     Order(title = R.string.screen_order),
     OrderItem(title = R.string.screen_order_item),
-    AIPickUp(title = R.string.screen_ai_pickup)
+    AIPickUp(title = R.string.screen_ai_pickup),
+    AIModelPreferences(title = R.string.screen_ai_model_preferences),
 }
