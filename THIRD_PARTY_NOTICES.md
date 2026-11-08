@@ -14,16 +14,25 @@ required notices. The project license does not relicense these components.
 
 | Component | Project / publisher | Purpose in this app | License information |
 |---|---|---|---|
-| AndroidX Core KTX | [AndroidX](https://developer.android.com/jetpack/androidx) | Android platform extensions | Apache-2.0; verify the exact artifact metadata |
-| AndroidX Activity Compose | [AndroidX](https://developer.android.com/jetpack/androidx) | Activity integration for Compose | Apache-2.0; verify the exact artifact metadata |
-| AndroidX Lifecycle Runtime KTX | [AndroidX](https://developer.android.com/jetpack/androidx) | Lifecycle-aware runtime APIs | Apache-2.0; verify the exact artifact metadata |
-| AndroidX Navigation Compose | [AndroidX](https://developer.android.com/jetpack/androidx) | Compose navigation | Apache-2.0; verify the exact artifact metadata |
-| ConstraintLayout Compose | [AndroidX](https://developer.android.com/jetpack/androidx) | Constraint-based Compose layouts | Apache-2.0; verify the exact artifact metadata |
+| AndroidX Core KTX, Activity Compose, Lifecycle, Navigation and ConstraintLayout Compose | [AndroidX](https://developer.android.com/jetpack/androidx) | Android platform, lifecycle, navigation and layout APIs | Apache-2.0; verify the exact artifact metadata |
 | Jetpack Compose UI, Material 3, Material Icons, tooling and test artifacts | [AndroidX / Jetpack Compose](https://developer.android.com/jetpack/compose) | UI toolkit, components, icons, previews and UI tests | Apache-2.0; verify each resolved artifact |
+| AndroidX AppFunctions and AppFunctions compiler | [AndroidX](https://developer.android.com/jetpack/androidx) | Exposes app functions to the ML Kit GenAI Agent integration | Verify the exact artifact metadata and preview/alpha terms |
 | Hilt and AndroidX Hilt | [Dagger / Google](https://dagger.dev/hilt/) and [AndroidX](https://developer.android.com/jetpack/androidx) | Dependency injection and lifecycle integration | Apache-2.0; verify each resolved artifact |
-| Google Agent Development Kit (ADK) for Kotlin (core, Firebase, LiteRT-LM and processor artifacts) | [Google ADK](https://google.github.io/adk-docs/) | Agent orchestration, model integration and code generation | Check the license distributed with the exact ADK artifact/version |
+| Google Agent Development Kit (ADK) for Kotlin (core, Firebase, LiteRT-LM and processor artifacts) | [Google ADK](https://google.github.io/adk-docs/) | Agent orchestration, Firebase and LiteRT-LM model integration, and code generation | Check the license distributed with the exact ADK artifact/version |
+| LiteRT-LM Android runtime | [Google AI Edge](https://ai.google.dev/edge/litert) | Local model inference on Android | Verify the license and notices for the exact runtime artifact/version |
+| ML Kit GenAI Agent and Prompt APIs | [Google ML Kit](https://developers.google.com/ml-kit) | Gemini Nano agent execution and prompt/content APIs | Verify the license and preview/alpha terms for the exact artifacts |
 | Firebase AI Logic, Firebase BOM and Firebase App Check Debug | [Firebase](https://firebase.google.com/) | Firebase AI integration, dependency alignment and App Check | Firebase Android SDK components are published under Apache-2.0; review each artifact's license and applicable Firebase service terms |
 | Kotlinx Serialization JSON | [Kotlin](https://github.com/Kotlin/kotlinx.serialization) | JSON serialization | Apache-2.0; verify the exact artifact metadata |
+
+## Model and service terms
+
+The local model weights are separate from the LiteRT-LM runtime and from this repository's source-code license.
+
+- **Gemma 4 E2B IT:** the LiteRT-LM conversion repository may identify the conversion package as Apache-2.0, but the underlying Gemma weights remain subject to Google's Gemma terms and prohibited-use policy. Review the exact model card and terms before use or redistribution.
+- **Qwen2.5 1.5B Instruct:** review the exact upstream model card and license for the converted LiteRT-LM artifact before use or redistribution.
+- **Gemini Nano and Firebase-hosted models/services:** availability, model access, acceptable use, and redistribution are governed by the applicable Google, Firebase, and model/service terms.
+
+The repository license does not grant rights to model weights, hosted AI services, or third-party APIs.
 
 ## Build and test tooling
 
@@ -39,14 +48,6 @@ test artifacts, or a complete development environment.
 - [Google Services Gradle plugin](https://developers.google.com/android/guides/google-services-plugin)
 - [JUnit 4](https://junit.org/junit4/)
 - [AndroidX Test](https://developer.android.com/training/testing)
-
-## AI models and hosted services
-
-This repository's license does not grant rights to Google Gemini models, Gemini Nano,
-model weights, Firebase-hosted services, or other hosted AI services. Availability,
-model access, acceptable use, and redistribution are governed by the applicable
-provider terms and model-specific licenses. Consult the provider documentation and
-terms for the exact model and service being used.
 
 ## Attribution and license texts
 
