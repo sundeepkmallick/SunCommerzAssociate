@@ -4,6 +4,8 @@ import android.content.Context
 import com.suncommerz.associate.ai.download.LiteRtLmModelDownloadManager
 import com.sunmobile.aiagent.litertlm.LiteRtLmModelFactory
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
@@ -42,7 +44,10 @@ class SdkLiteRtLmPickupAgent @Inject constructor(
         check(definition.pickupAgentValidated) {
             "This model has not passed this app's pickup-agent compatibility tests."
         }
-        sdkPickupAgent.run(
+        // The ViewModel invokes pickup from viewModelScope (Main). Keep the native
+        // LiteRT-LM inference and ADK tool round-trips off the UI thread.
+        withContext(Dispatchers.IO) {
+            sdkPickupAgent.run(
             modelFactory = LiteRtLmModelFactory(
                 modelFile = modelFile,
                 cacheDirectory = File(context.cacheDir, "sunmobile-aiagent-litertlm"),
@@ -54,7 +59,8 @@ class SdkLiteRtLmPickupAgent @Inject constructor(
             productId = productId,
             currentStoreId = currentStoreId,
             requestedQuantity = requestedQuantity,
-            radiusMeters = radiusMeters,
-        )
+                radiusMeters = radiusMeters,
+            )
+        }
     }
 }
