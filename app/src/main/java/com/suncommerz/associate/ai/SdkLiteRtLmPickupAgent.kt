@@ -5,9 +5,9 @@ import com.suncommerz.associate.ai.download.LiteRtLmModelDownloadManager
 import com.sunmobile.aiagent.litertlm.LiteRtLmModelFactory
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -48,17 +48,17 @@ class SdkLiteRtLmPickupAgent @Inject constructor(
         // LiteRT-LM inference and ADK tool round-trips off the UI thread.
         withContext(Dispatchers.IO) {
             sdkPickupAgent.run(
-            modelFactory = LiteRtLmModelFactory(
-                modelFile = modelFile,
-                cacheDirectory = File(context.cacheDir, "sunmobile-aiagent-litertlm"),
-                modelName = definition.artifactFileName,
-            ),
-            prompt = prompt,
-            userId = userId,
-            sessionId = sessionId,
-            productId = productId,
-            currentStoreId = currentStoreId,
-            requestedQuantity = requestedQuantity,
+                modelFactory = LiteRtLmModelFactory(
+                    modelFile = modelFile,
+                    cacheDirectory = File(context.cacheDir, "sunmobile-aiagent-litertlm"),
+                    modelName = definition.artifactFileName,
+                ),
+                prompt = prompt,
+                userId = userId,
+                sessionId = sessionId,
+                productId = productId,
+                currentStoreId = currentStoreId,
+                requestedQuantity = requestedQuantity,
                 radiusMeters = radiusMeters,
             )
         }
