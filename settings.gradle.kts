@@ -22,9 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-// The SDK is pinned to feature/agent-sdk-roadmap by the submodule entry.
-includeBuild("SunMobileAiAgentSdk")
-
 rootProject.name = "SunCommerzAssociate"
 include(":app")
- 
