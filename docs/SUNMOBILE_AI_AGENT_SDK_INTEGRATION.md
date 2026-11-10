@@ -1,54 +1,44 @@
 # SunMobileAiAgentSdk integration
 
-## What changed
+## SDK dependency
 
-The app includes the SDK as a Git submodule at `SunMobileAiAgentSdk`, pinned to the SDK branch commit recorded by the submodule gitlink. Gradle includes that checkout as a composite build; no Maven publication or credentials are required.
+The app consumes the released SDK modules from Maven Central. The version is centralized in `gradle/libs.versions.toml` as `sunMobileAiAgentSdk = "0.1.0-rc.1"`.
 
-The Firebase and LiteRT-LM pickup paths now compose host-owned read-only BOPIS tools through:
-- `:agent-core` — tool registry, schema validation, capability contracts and policy executor;
-- `:agent-adk` — Google ADK runner/session/event integration;
-- `:agent-firebase` — Firebase AI Logic model factory;
-- `:agent-litertlm` — LiteRT-LM model factory.
+| Module | Maven coordinate |
+|---|---|
+| Core | `io.github.sundeepkmallick:agent-core:0.1.0-rc.1` |
+| ADK | `io.github.sundeepkmallick:agent-adk:0.1.0-rc.1` |
+| Firebase | `io.github.sundeepkmallick:agent-firebase:0.1.0-rc.1` |
+| LiteRT-LM | `io.github.sundeepkmallick:agent-litertlm:0.1.0-rc.1` |
 
-Gemini Nano remains on the existing host ML Kit Agent API + AppFunctions implementation. AppFunctions are declared by the host app and must enforce their own authorization; the SDK's dynamic tool policy does not intercept framework-dispatched AppFunctions.
+Maven Central is already configured in the root dependency repositories. No SDK submodule checkout, composite build, repository credentials or local publication step is required. The published Gradle module metadata/POMs provide the SDK modules' transitive dependencies.
 
-## Local checkout
+## Pickup integration
 
-Clone with submodules:
+Firebase AI Logic and LiteRT-LM use the SDK ADK runner/provider, ToolRegistry, JSON-schema validation and ToolExecutor policy. BOPIS-specific tools remain in the host app.
+
+The SDK tool composition scopes product/store/quantity/radius from the active order workflow, permits only read-only tools, and limits stock checks to the current store or nearby stores discovered by the host's stock-filtering use case. Existing host validation and associate approval remain the source of truth; no model output directly mutates an order.
+
+Gemini Nano continues to use the existing host ML Kit Agent API + AppFunctions path. This is intentional: AppFunctions are declared by the host and their security checks are not intercepted by the SDK's dynamic ToolRegistry.
+
+## LiteRT-LM lifecycle
+
+The host owns model download/catalogue/checksum/device admission. The SDK model factory receives only an already installed and verified file. The host serializes execution and closes each SDK agent/model after the turn.
+
+## Local build
+
+Clone the application normally; no recursive submodule option is needed:
 
 ```bash
-git clone --recurse-submodules https://github.com/sundeepkmallick/SunCommerzAssociate.git
+git clone https://github.com/sundeepkmallick/SunCommerzAssociate.git
 cd SunCommerzAssociate
 ./gradlew :app:assembleDebug :app:testDebugUnitTest
 ```
 
-If already cloned:
+The app's Firebase configuration is required for real execution. CI creates a non-production placeholder file only to compile; it cannot run Firebase requests.
 
-```bash
-git submodule update --init --recursive
-```
+## CI and validation
 
-The app's existing Firebase configuration remains required for real execution. CI creates a non-production placeholder file only to compile; it cannot run Firebase requests.
+Android CI checks out only the application repository, installs API 37.0, and compiles/tests against the fixed Maven Central SDK release. A green CI run proves compile/unit-test success only. It does not validate Firebase credentials, device AICore/Gemini Nano availability, local-model performance or AppFunctions behavior.
 
-## Request scoping and safety
-
-For each item, the ViewModel passes the current order product, current store, requested quantity and maximum nearby radius into the SDK tool composition. The tool registry is created per item. Tool implementations:
-- only query the current product;
-- only query the current store, or nearby stores returned by the host's availability-filtered nearby-store use case;
-- do not accept a model-selected associate, order, tenant or arbitrary store scope;
-- validate requested quantity and radius against host values;
-- are read-only; model output is still a proposal, not an order mutation.
-
-The existing ViewModel re-reads live inventory and fulfillment options before showing/approving proposals. Associate approval and the authoritative order update use cases remain unchanged. The host still owns fallback selection and Gemini Nano AppFunctions.
-
-## LiteRT-LM lifecycle
-
-The app's download manager remains responsible for artifact provenance, file size, SHA-256, installation and the BOPIS-validated catalogue flag. The SDK factory accepts only an already-installed file. SDK agent creation/execution/close is serialized by the host's LiteRT-LM agent mutex, so a native engine is closed before a later request can load the model again. This is intentionally conservative; model caching/performance tuning should follow device tests.
-
-## CI and validation limits
-
-The workflow discovers the SDK Manager under `ANDROID_HOME/cmdline-tools` instead of relying on a globally exported `sdkmanager` command. It installs the API 37.0 preview package (`platforms;android-37.0`), which is the SDK Manager package name for this API level.
-
-The Android workflow checks out the SDK submodule recursively and compiles/tests the app with a placeholder Firebase configuration. A green CI run proves compile/unit-test success only. It does not validate Firebase credentials, device AICore/Gemini Nano availability, local-model performance, or AppFunctions behavior.
-
-Before enabling for associates, test Firebase and LiteRT-LM on the app's supported devices, test Gemini Nano on eligible API 36+ devices, and run the regression cases in the SDK migration guide. Do not remove the legacy pickup classes until those checks and rollout telemetry are satisfactory.
+Before enabling for associates, test Firebase and LiteRT-LM on supported devices, test Gemini Nano on eligible API 36+ devices, and run the regression cases in the SDK migration guide. Keep legacy pickup classes until those checks and rollout telemetry are satisfactory.
