@@ -33,7 +33,6 @@ android {
         buildConfigField("String", "FIREBASE_API_KEY", "\"${firebaseProperty("FIREBASE_API_KEY")}\"")
         buildConfigField("String", "FIREBASE_APP_ID", "\"${firebaseProperty("FIREBASE_APP_ID")}\"")
         buildConfigField("String", "FIREBASE_PROJECT_ID", "\"${firebaseProperty("FIREBASE_PROJECT_ID")}\"")
-        // Generated from the same version-catalog entry used by the packaged runtime dependency.
         buildConfigField("String", "LITERT_LM_VERSION", "\"${libs.versions.litertLm.get()}\"")
     }
 
@@ -62,11 +61,11 @@ ksp {
 }
 
 dependencies {
-    // SunMobileAiAgentSdk local composite-build modules (no published artifacts required).
-    implementation("com.sunmobile.aiagent:agent-core:0.1.0-SNAPSHOT")
-    implementation("com.sunmobile.aiagent:agent-adk:0.1.0-SNAPSHOT")
-    implementation("com.sunmobile.aiagent:agent-firebase:0.1.0-SNAPSHOT")
-    implementation("com.sunmobile.aiagent:agent-litertlm:0.1.0-SNAPSHOT")
+    // SunMobileAiAgentSdk is consumed from Maven Central at a fixed release version.
+    implementation(libs.sunmobile.agent.core)
+    implementation(libs.sunmobile.agent.adk)
+    implementation(libs.sunmobile.agent.firebase)
+    implementation(libs.sunmobile.agent.litertlm)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
@@ -91,8 +90,6 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     ksp(libs.hilt.compiler)
-
-    // ADK supports the same pickup tool set on LiteRT-LM and Firebase.
 
     // Gemini Nano Agent API and Android AppFunctions tool runtime.
     implementation(libs.mlkit.genai.agent)
