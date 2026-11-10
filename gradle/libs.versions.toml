@@ -20,10 +20,16 @@ googleServices = "4.5.0"
 mlkitGenaiAgent = "1.0.0-alpha1"
 mlkitGenaiPrompt = "1.0.0-beta5"
 appfunctions = "1.0.0-alpha13"
+# SDK artifacts published to Maven Central.
+sunMobileAiAgentSdk = "0.1.0-rc.1"
 # litertLm v0.13.1 is compatible with Gemma 4 E2B IT and Qwen2.5 1.5B Instruct
 litertLm = "0.13.1"
 
 [libraries]
+sunmobile-agent-core = { module = "io.github.sundeepkmallick:agent-core", version.ref = "sunMobileAiAgentSdk" }
+sunmobile-agent-adk = { module = "io.github.sundeepkmallick:agent-adk", version.ref = "sunMobileAiAgentSdk" }
+sunmobile-agent-firebase = { module = "io.github.sundeepkmallick:agent-firebase", version.ref = "sunMobileAiAgentSdk" }
+sunmobile-agent-litertlm = { module = "io.github.sundeepkmallick:agent-litertlm", version.ref = "sunMobileAiAgentSdk" }
 androidx-compose-material-icons-extended-android = { module = "androidx.compose.material:material-icons-extended-android", version.ref = "materialIconsExtendedAndroid" }
 androidx-compose-material3-window-size-class1 = { module = "androidx.compose.material3:material3-window-size-class" }
 androidx-constraintlayout-compose-android = { module = "androidx.constraintlayout:constraintlayout-compose-android", version.ref = "constraintlayoutComposeAndroid" }
