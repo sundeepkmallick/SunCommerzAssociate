@@ -2,7 +2,6 @@
 agp = "9.5.0"
 constraintlayoutComposeAndroid = "1.1.2"
 coreKtx = "1.19.0"
-firebaseBom = "34.18.0"
 hiltAndroid = "2.60.1"
 hiltLifecycleViewmodelCompose = "1.4.0"
 junit = "4.13.2"
@@ -40,9 +39,6 @@ androidx-appfunctions = { module = "androidx.appfunctions:appfunctions", version
 androidx-appfunctions-compiler = { module = "androidx.appfunctions:appfunctions-compiler", version.ref = "appfunctions" }
 mlkit-genai-agent = { module = "com.google.mlkit:genai-agent", version.ref = "mlkitGenaiAgent" }
 mlkit-genai-prompt = { module = "com.google.mlkit:genai-prompt", version.ref = "mlkitGenaiPrompt" }
-firebase-ai = { module = "com.google.firebase:firebase-ai" }
-firebase-appcheck-debug = { module = "com.google.firebase:firebase-appcheck-debug" }
-firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hiltAndroid" }
 hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hiltAndroid" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
