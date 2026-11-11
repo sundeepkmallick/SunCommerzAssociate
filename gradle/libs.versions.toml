@@ -17,7 +17,7 @@ materialIconsExtendedAndroid = "1.7.8"
 navigationCompose = "2.10.0"
 googleServices = "4.5.0"
 appfunctions = "1.0.0-alpha13"
-sunMobileAiAgentSdk = "0.1.0-rc.1"
+sunMobileAiAgentSdk = "0.1.0-rc.2"
 litertLm = "0.13.1"
 
 [libraries]
