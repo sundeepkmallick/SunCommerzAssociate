@@ -1,89 +1,92 @@
 package com.suncommerz.associate.ai
 
 import android.content.Context
-import android.os.Build
-import com.google.mlkit.genai.agent.Agent
-import com.google.mlkit.genai.agent.AgentEvent
-import com.google.mlkit.genai.agent.AgentRunner
-import com.google.mlkit.genai.common.FeatureStatus
-import com.google.mlkit.genai.prompt.Content
-import com.google.mlkit.genai.prompt.Generation
+import com.sunmobile.aiagent.core.AgentBuilder
+import com.sunmobile.aiagent.core.AgentConfiguration
+import com.sunmobile.aiagent.core.AgentRequest
+import com.sunmobile.aiagent.mlkit.GeminiNanoAgentBackendProvider
+import com.sunmobile.aiagent.mlkit.GeminiNanoAvailability
+import com.sunmobile.aiagent.mlkit.GeminiNanoConfiguration
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.collect
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Runs the complete pickup reasoning and tool-calling loop with Gemini Nano.
- * AICore owns model provisioning; this app only checks whether the feature is
- * already available and never initiates a Gemini Nano model download.
+ * Gemini Nano pickup execution through SunMobileAiAgentSdk.
+ *
+ * The host continues to own AppFunction declarations, service implementation,
+ * authorization and business operations. ML Kit Agent/Prompt lifecycle and
+ * inference are encapsulated by the SDK backend.
  */
 @Singleton
 class GeminiNanoPickupAgent @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @ApplicationContext context: Context,
 ) : PickupAgent {
-    suspend fun availabilityStatus(): String {
-        if (Build.VERSION.SDK_INT < 36) return "ANDROID_VERSION_UNSUPPORTED"
-        val model = Generation.getClient()
-        return try {
-            model.checkStatus().toString()
-        } finally {
-            model.close()
+    private val backend = GeminiNanoAgentBackendProvider(
+        context = context.applicationContext,
+        configuration = GeminiNanoConfiguration(
+            agentName = "PickupOrchestrator",
+            instructions = PickupAgentInstructions.SYSTEM,
+            maxTurns = 10,
+            minimumAndroidApi = 36,
+            enableAppFunctions = true,
+        ),
+    )
+
+    suspend fun availabilityStatus(): String =
+        when (val availability = backend.checkAvailability()) {
+            GeminiNanoAvailability.Available -> "AVAILABLE"
+            is GeminiNanoAvailability.ModelNotReady -> availability.featureStatus
+            is GeminiNanoAvailability.UnsupportedAndroidVersion ->
+                "UNSUPPORTED_ANDROID_API_${availability.actualApi}_REQUIRES_${availability.requiredApi}"
+            is GeminiNanoAvailability.StatusCheckFailed ->
+                "STATUS_CHECK_FAILED: ${availability.cause.message.orEmpty()}"
         }
-    }
 
     suspend fun isAvailable(): Boolean =
-        availabilityStatus() == FeatureStatus.AVAILABLE.toString()
+        backend.checkAvailability() == GeminiNanoAvailability.Available
 
     override suspend fun run(prompt: String, userId: String, sessionId: String): String {
-        check(isAvailable()) {
-            "Gemini Nano is not currently available on this device"
+        when (val availability = backend.checkAvailability()) {
+            GeminiNanoAvailability.Available -> Unit
+            is GeminiNanoAvailability.ModelNotReady ->
+                error("Gemini Nano is not ready: ${availability.featureStatus}")
+            is GeminiNanoAvailability.UnsupportedAndroidVersion ->
+                error("Gemini Nano requires Android API ${availability.requiredApi}; device API is ${availability.actualApi}")
+            is GeminiNanoAvailability.StatusCheckFailed ->
+                throw IllegalStateException("Unable to check Gemini Nano readiness", availability.cause)
         }
 
-        val model = Generation.getClient()
-        var runner: AgentRunner? = null
+        val agent = AgentBuilder()
+            .configuration(
+                AgentConfiguration(
+                    name = "PickupOrchestrator",
+                    instructions = PickupAgentInstructions.SYSTEM,
+                    maxTurns = 10,
+                    metadata = mapOf("application" to "SunCommerzAssociate"),
+                )
+            )
+            .backend(backend)
+            .build()
 
-        try {
-            val agent = Agent.builder()
-                .setName("PickupOrchestrator")
-                .setInstructions(PickupAgentInstructions.SYSTEM)
-                .enableAppFunctions(true)
-                .setMaxTurns(10)
-                .build()
-
-            runner = AgentRunner(context, agent)
-            val invokedTools = mutableListOf<String>()
-            var finalText: String? = null
-
-            runner.runSingleTurnAsync(
-                Content.builder()
-                    .text(prompt)
-                    .build()
-            ).collect { event ->
-                when (event) {
-                    is AgentEvent.FunctionCall -> invokedTools += event.name
-                    is AgentEvent.TextMessage -> {
-                        if (!event.isPartial) finalText = event.text
-                    }
-                    else -> Unit
-                }
-            }
-
-            val response = checkNotNull(finalText?.takeIf(String::isNotBlank)) {
-                "Gemini Nano completed without a final pickup action"
-            }
-            check(invokedTools.any { name ->
-                name.substringAfterLast('#')
+        return agent.use { runningAgent ->
+            val result = runningAgent.execute(
+                AgentRequest(
+                    prompt = prompt,
+                    sessionId = sessionId,
+                    metadata = mapOf("userId" to userId),
+                )
+            )
+            check(result.toolInvocations.any { invocation ->
+                invocation.toolName.substringAfterLast('#')
                     .substringAfterLast('.')
                     .equals("getProductStockInStore", ignoreCase = true)
             }) {
                 "Gemini Nano did not verify current-store stock with getProductStockInStore"
             }
-
-            return response.trim()
-        } finally {
-            runner?.close()
-            model.close()
+            checkNotNull(result.text?.takeIf(String::isNotBlank)) {
+                "Gemini Nano completed without a final pickup action"
+            }.trim()
         }
     }
 }
