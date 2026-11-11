@@ -1,5 +1,5 @@
 [versions]
-agp = "9.5.0"
+agp = "9.5.1"
 constraintlayoutComposeAndroid = "1.1.2"
 coreKtx = "1.19.0"
 hiltAndroid = "2.60.1"
