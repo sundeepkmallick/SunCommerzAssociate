@@ -83,6 +83,7 @@ dependencies {
     implementation(libs.sunmobile.agent.adk)
     implementation(libs.sunmobile.agent.firebase)
     implementation(libs.sunmobile.agent.litertlm)
+    implementation(libs.sunmobile.agent.mlkit)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
@@ -108,9 +109,7 @@ dependencies {
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     ksp(libs.hilt.compiler)
 
-    // AppFunctions remain host-owned so the host controls declarations and authorization.
-    implementation(libs.mlkit.genai.agent)
-    implementation(libs.mlkit.genai.prompt)
+    // AppFunctions remain host-owned; ML Kit Agent/Prompt are encapsulated by agent-mlkit.
     implementation(libs.androidx.appfunctions)
     ksp(libs.androidx.appfunctions.compiler)
 
