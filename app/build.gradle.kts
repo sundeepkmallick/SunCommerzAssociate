@@ -48,10 +48,10 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "FIREBASE_API_KEY", "\"\${firebaseProperty("FIREBASE_API_KEY")}\"")
-        buildConfigField("String", "FIREBASE_APP_ID", "\"\${firebaseProperty("FIREBASE_APP_ID")}\"")
-        buildConfigField("String", "FIREBASE_PROJECT_ID", "\"\${firebaseProperty("FIREBASE_PROJECT_ID")}\"")
-        buildConfigField("String", "LITERT_LM_VERSION", "\"\${libs.versions.litertLm.get()}\"")
+        buildConfigField("String", "FIREBASE_API_KEY", "\"${firebaseProperty("FIREBASE_API_KEY")}\"")
+        buildConfigField("String", "FIREBASE_APP_ID", "\"${firebaseProperty("FIREBASE_APP_ID")}\"")
+        buildConfigField("String", "FIREBASE_PROJECT_ID", "\"${firebaseProperty("FIREBASE_PROJECT_ID")}\"")
+        buildConfigField("String", "LITERT_LM_VERSION", "\"${libs.versions.litertLm.get()}\"")
     }
 
     packaging {
