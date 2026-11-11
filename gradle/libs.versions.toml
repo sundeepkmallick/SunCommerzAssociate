@@ -16,8 +16,6 @@ ksp = "2.3.6"
 materialIconsExtendedAndroid = "1.7.8"
 navigationCompose = "2.10.0"
 googleServices = "4.5.0"
-mlkitGenaiAgent = "1.0.0-alpha1"
-mlkitGenaiPrompt = "1.0.0-beta5"
 appfunctions = "1.0.0-alpha13"
 sunMobileAiAgentSdk = "0.1.0-rc.1"
 litertLm = "0.13.1"
@@ -37,8 +35,6 @@ androidx-hilt-lifecycle-viewmodel-compose = { module = "androidx.hilt:hilt-lifec
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 androidx-appfunctions = { module = "androidx.appfunctions:appfunctions", version.ref = "appfunctions" }
 androidx-appfunctions-compiler = { module = "androidx.appfunctions:appfunctions-compiler", version.ref = "appfunctions" }
-mlkit-genai-agent = { module = "com.google.mlkit:genai-agent", version.ref = "mlkitGenaiAgent" }
-mlkit-genai-prompt = { module = "com.google.mlkit:genai-prompt", version.ref = "mlkitGenaiPrompt" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hiltAndroid" }
 hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hiltAndroid" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
