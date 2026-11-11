@@ -13,7 +13,7 @@ All SDK artifacts use group \`io.github.sundeepkmallick\` and share one version.
 | ML Kit GenAI | \`agent-mlkit\` |
 | Gemini Nano compatibility adapter | \`agent-gemini-nano\` |
 
-The app currently consumes Core, ADK, Firebase and LiteRT-LM. The ML Kit modules are available through the same source switch and can be added as dependencies when their APIs are adopted. Gemini Nano continues to use the host ML Kit Agent API + AppFunctions path for now, keeping AppFunctions declarations and authorization under host control.
+The app consumes Core, ADK, Firebase, LiteRT-LM and agent-mlkit. Gemini Nano inference, ML Kit Agent/Prompt clients, readiness checks and AgentRunner lifecycle are encapsulated by agent-mlkit. The host retains Android AppFunctions declarations, service implementation, manifest registration, KSP/compiler processing and business authorization.
 
 ## Select the SDK source
 
@@ -78,4 +78,6 @@ The app's dependency declarations do not need to change when switching sources.
 
 Firebase AI Logic and LiteRT-LM use the SDK ADK runner/provider, ToolRegistry, JSON-schema validation and ToolExecutor policy. BOPIS-specific tools remain in the host app. The host owns model download/catalogue/checksum/device admission; the SDK LiteRT-LM model factory receives only an already installed and verified file.
 
-The app's Gemini Nano AppFunctions remain host-owned. A successful compile/unit-test run does not validate Firebase credentials, device AICore/Gemini Nano availability, local-model performance or AppFunctions behavior. Test each backend on supported devices before enabling for associates.
+GeminiNanoPickupAgent creates a core AgentBuilder with GeminiNanoAgentBackendProvider and GeminiNanoConfiguration. It checks SDK readiness before execution and verifies that getProductStockInStore was invoked. The SDK deliberately does not accept dynamic ToolRegistry tools for this backend: Android AppFunctions dispatch outside the SDK AgentPolicy, so each host AppFunction must independently validate caller identity, arguments, authorization and current business state. The app keeps androidx.appfunctions:appfunctions and its compiler; it no longer declares ML Kit GenAI Agent or Prompt dependencies directly.
+
+A successful compile/unit-test run does not validate Firebase credentials, device AICore/Gemini Nano availability, local-model performance or AppFunctions behavior. Test each backend on supported devices before enabling for associates.
