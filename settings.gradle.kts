@@ -44,6 +44,19 @@ rootProject.name = "SunCommerzAssociate"
 include(":app")
 
 if (sunAiSdkSource == "includeBuild") {
-    // Gradle substitutes every SDK project matching group:name coordinates.
-    includeBuild(sunAiSdkDir)
+    includeBuild(sunAiSdkDir) {
+        dependencySubstitution {
+            listOf(
+                "agent-core",
+                "agent-adk",
+                "agent-firebase",
+                "agent-litertlm",
+                "agent-mlkit",
+                "agent-gemini-nano"
+            ).forEach { moduleName ->
+                substitute(module("io.github.sundeepkmallick:$moduleName"))
+                    .using(project(":$moduleName"))
+            }
+        }
+    }
 }
