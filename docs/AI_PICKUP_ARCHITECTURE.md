@@ -14,7 +14,7 @@ The implementation has three selectable backends:
 | LiteRT-LM | Google ADK for Kotlin with the LiteRT-LM model adapter | App downloads and manages the selected local `.litertlm` artifact |
 | Gemini Nano | ML Kit GenAI Agent API with Android AppFunctions | Android AICore manages model availability; the app does not download model weights |
 
-Firebase and LiteRT-LM use the shared `PickupAdkAgentFactory` and BOPIS tool set. Gemini Nano uses a separate ML Kit Agent API integration and exposes app functions through `enableAppFunctions(true)`. The backends share the pickup instructions and are expected to perform equivalent BOPIS tasks, but their underlying APIs and lifecycle/session behaviour are not identical.
+Firebase and LiteRT-LM use the shared `PickupAdkAgentFactory` and BOPIS tool set. Gemini Nano uses the SDK agent-mlkit backend provider and exposes host-declared AppFunctions through enableAppFunctions(true). The host keeps AppFunctions declarations and business authorization; the SDK encapsulates ML Kit Agent/Prompt usage, readiness checks and AgentRunner lifecycle. The backends share the pickup instructions and are expected to perform equivalent BOPIS tasks, but their underlying APIs and lifecycle/session behaviour are not identical.
 
 ## Request flow
 
@@ -105,7 +105,7 @@ The adapter verifies that the agent invoked `getProductStockInStore` before acce
 
 ### Gemini Nano
 
-`GeminiNanoPickupAgent` checks Android API level and ML Kit GenAI feature status before use. It builds an ML Kit Agent with AppFunctions enabled and checks that `getProductStockInStore` was called. The model and AgentRunner are closed after the single-turn request.
+`GeminiNanoPickupAgent` creates a GeminiNanoAgentBackendProvider from SDK module agent-mlkit, checks SDK readiness, and builds a core Agent with AppFunctions enabled. It verifies that getProductStockInStore was invoked. ML Kit clients and AgentRunner lifecycle are managed inside the SDK provider. AppFunctions declarations, manifest service, KSP compiler, and authorization remain host-owned. Because Android AppFunctions dispatch outside the SDK dynamic ToolRegistry and AgentPolicy, every AppFunction validates caller identity, arguments, authorization and current business state.
 
 Gemini Nano provisioning is controlled by AICore. This app does not download or manage Gemini Nano model weights. The current implementation uses a single-turn AgentRunner; do not assume it provides the same persistent session behaviour as the ADK paths.
 
@@ -116,7 +116,7 @@ Gemini Nano provisioning is controlled by AICore. This app does not download or 
 - `ai/PickupAdkAgentFactory.kt` — ADK agent and BOPIS tool registration.
 - `ai/FirebasePickupAgent.kt` — Firebase ADK adapter.
 - `ai/LiteRtLmPickupAgent.kt` — LiteRT-LM ADK adapter and runtime lifecycle.
-- `ai/GeminiNanoPickupAgent.kt` — ML Kit Agent API adapter.
+- `ai/GeminiNanoPickupAgent.kt` — host adapter that configures the SDK agent-mlkit provider; ML Kit implementation is encapsulated by the SDK.
 - `ai/HybridPickupAgentManager.kt` — preferred-backend selection, response validation, and Firebase fallback.
 - `ai/LocalModelCatalog.kt` — local model metadata and app-specific validation flags.
 - `ui/aipickup/AIPickUpViewModel.kt` — proposal reconciliation, approval-time validation, and order updates.
