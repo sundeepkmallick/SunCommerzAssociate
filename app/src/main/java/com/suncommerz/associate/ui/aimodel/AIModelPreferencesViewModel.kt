@@ -6,8 +6,8 @@ import com.suncommerz.associate.BuildConfig
 import com.suncommerz.associate.ai.AIBackend
 import com.suncommerz.associate.ai.AIModelPreferencesStore
 import com.suncommerz.associate.ai.GeminiNanoPickupAgent
-import com.suncommerz.associate.ai.LiteRtLmPickupAgent
 import com.suncommerz.associate.ai.LocalModelCatalog
+import com.suncommerz.associate.ai.SdkLiteRtLmPickupAgent
 import com.suncommerz.associate.ai.LocalModelDefinition
 import com.suncommerz.associate.ai.download.LiteRtLmModelDownloadManager
 import com.suncommerz.associate.ai.download.ModelDownloadState
@@ -41,7 +41,7 @@ class AIModelPreferencesViewModel @Inject constructor(
     private val preferences: AIModelPreferencesStore,
     private val nanoAgent: GeminiNanoPickupAgent,
     private val downloadManager: LiteRtLmModelDownloadManager,
-    private val liteRtLmPickupAgent: LiteRtLmPickupAgent,
+    private val sdkLiteRtLmPickupAgent: SdkLiteRtLmPickupAgent,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(
         AIModelPreferencesUiState(
@@ -106,15 +106,17 @@ class AIModelPreferencesViewModel @Inject constructor(
             }
             _uiState.update { it.copy(isBusy = true, error = null) }
             runCatching {
-                // Release the current engine before a verified replacement can retire its file.
+                // Wait for any in-flight SDK turn to close its native engine before
+                // the download manager replaces the installed model file.
                 if (_uiState.value.installedLocalModelId != null &&
                     _uiState.value.installedLocalModelId != modelId
                 ) {
                     preferences.setPreferredBackend(AIBackend.FIREBASE)
-                    liteRtLmPickupAgent.releaseModel()
                     _uiState.update { it.copy(preferredBackend = AIBackend.FIREBASE) }
                 }
-                downloadManager.enqueue(modelId, _uiState.value.mobileDataAllowed)
+                sdkLiteRtLmPickupAgent.withModelMaintenance {
+                    downloadManager.enqueue(modelId, _uiState.value.mobileDataAllowed)
+                }
             }.onSuccess { state ->
                 _uiState.update { it.copy(download = state, isBusy = false) }
             }.onFailure { error ->
@@ -138,8 +140,9 @@ class AIModelPreferencesViewModel @Inject constructor(
                     preferences.setPreferredBackend(AIBackend.FIREBASE)
                     _uiState.update { it.copy(preferredBackend = AIBackend.FIREBASE) }
                 }
-                liteRtLmPickupAgent.releaseModel()
-                downloadManager.removeInstalledModel()
+                sdkLiteRtLmPickupAgent.withModelMaintenance {
+                    downloadManager.removeInstalledModel()
+                }
             }.onSuccess {
                 _uiState.update {
                     it.copy(

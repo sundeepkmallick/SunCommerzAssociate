@@ -1,8 +1,7 @@
 [versions]
-agp = "9.5.0"
+agp = "9.5.1"
 constraintlayoutComposeAndroid = "1.1.2"
 coreKtx = "1.19.0"
-firebaseBom = "34.18.0"
 hiltAndroid = "2.60.1"
 hiltLifecycleViewmodelCompose = "1.4.0"
 junit = "4.13.2"
@@ -16,15 +15,19 @@ composeBom = "2026.08.00"
 ksp = "2.3.6"
 materialIconsExtendedAndroid = "1.7.8"
 navigationCompose = "2.10.0"
-adk = "1.0.0"
 googleServices = "4.5.0"
-mlkitGenaiAgent = "1.0.0-alpha1"
-mlkitGenaiPrompt = "1.0.0-beta5"
 appfunctions = "1.0.0-alpha13"
-# litertLm v0.13.1 is compatible with Gemma 4 E2B IT and Qwen2.5 1.5B Instruct
+sunMobileAiAgentSdk = "0.1.0-rc.2"
+firebaseBom = "34.18.0"
 litertLm = "0.13.1"
 
 [libraries]
+sunmobile-agent-core = { module = "io.github.sundeepkmallick:agent-core", version.ref = "sunMobileAiAgentSdk" }
+sunmobile-agent-adk = { module = "io.github.sundeepkmallick:agent-adk", version.ref = "sunMobileAiAgentSdk" }
+sunmobile-agent-firebase = { module = "io.github.sundeepkmallick:agent-firebase", version.ref = "sunMobileAiAgentSdk" }
+sunmobile-agent-litertlm = { module = "io.github.sundeepkmallick:agent-litertlm", version.ref = "sunMobileAiAgentSdk" }
+sunmobile-agent-mlkit = { module = "io.github.sundeepkmallick:agent-mlkit", version.ref = "sunMobileAiAgentSdk" }
+sunmobile-agent-gemini-nano = { module = "io.github.sundeepkmallick:agent-gemini-nano", version.ref = "sunMobileAiAgentSdk" }
 androidx-compose-material-icons-extended-android = { module = "androidx.compose.material:material-icons-extended-android", version.ref = "materialIconsExtendedAndroid" }
 androidx-compose-material3-window-size-class1 = { module = "androidx.compose.material3:material3-window-size-class" }
 androidx-constraintlayout-compose-android = { module = "androidx.constraintlayout:constraintlayout-compose-android", version.ref = "constraintlayoutComposeAndroid" }
@@ -32,12 +35,10 @@ androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = 
 androidx-hilt-lifecycle-viewmodel-compose = { module = "androidx.hilt:hilt-lifecycle-viewmodel-compose", version.ref = "hiltLifecycleViewmodelCompose" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 androidx-appfunctions = { module = "androidx.appfunctions:appfunctions", version.ref = "appfunctions" }
-androidx-appfunctions-compiler = { module = "androidx.appfunctions:appfunctions-compiler", version.ref = "appfunctions" }
-mlkit-genai-agent = { module = "com.google.mlkit:genai-agent", version.ref = "mlkitGenaiAgent" }
-mlkit-genai-prompt = { module = "com.google.mlkit:genai-prompt", version.ref = "mlkitGenaiPrompt" }
-firebase-ai = { module = "com.google.firebase:firebase-ai" }
-firebase-appcheck-debug = { module = "com.google.firebase:firebase-appcheck-debug" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+firebase-appcheck = { module = "com.google.firebase:firebase-appcheck" }
+firebase-appcheck-debug = { module = "com.google.firebase:firebase-appcheck-debug" }
+androidx-appfunctions-compiler = { module = "androidx.appfunctions:appfunctions-compiler", version.ref = "appfunctions" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hiltAndroid" }
 hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hiltAndroid" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -50,10 +51,6 @@ androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
-google-adk-kotlin-core-android = { group = "com.google.adk", name = "google-adk-kotlin-core-android", version.ref = "adk" }
-google-adk-kotlin-processor = { group = "com.google.adk", name = "google-adk-kotlin-processor", version.ref = "adk" }
-google-adk-kotlin-firebase-android = { group = "com.google.adk", name = "google-adk-kotlin-firebase-android", version.ref = "adk" }
-google-adk-kotlin-litertlm-android = { group = "com.google.adk", name = "google-adk-kotlin-litertlm-android", version.ref = "adk" }
 google-ai-edge-litertlm-android = { module = "com.google.ai.edge.litertlm:litertlm-android", version.ref = "litertLm" }
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }

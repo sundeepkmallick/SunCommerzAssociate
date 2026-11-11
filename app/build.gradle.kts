@@ -9,6 +9,24 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+val sunAiSdkSource = providers.gradleProperty("sunAiSdkSource")
+    .orElse("mavenCentral")
+    .get()
+val localSunAiSdkVersion = providers.gradleProperty("sunAiSdkVersion")
+    .orElse("0.1.0-rc.2")
+    .get()
+
+if (sunAiSdkSource == "mavenLocal") {
+    configurations.configureEach {
+        resolutionStrategy.eachDependency {
+            if (requested.group == "io.github.sundeepkmallick") {
+                useVersion(localSunAiSdkVersion)
+                because("Use the locally published SunMobileAiAgentSdk version")
+            }
+        }
+    }
+}
+
 android {
     namespace = "com.suncommerz.associate"
     compileSdk {
@@ -33,7 +51,6 @@ android {
         buildConfigField("String", "FIREBASE_API_KEY", "\"${firebaseProperty("FIREBASE_API_KEY")}\"")
         buildConfigField("String", "FIREBASE_APP_ID", "\"${firebaseProperty("FIREBASE_APP_ID")}\"")
         buildConfigField("String", "FIREBASE_PROJECT_ID", "\"${firebaseProperty("FIREBASE_PROJECT_ID")}\"")
-        // Generated from the same version-catalog entry used by the packaged runtime dependency.
         buildConfigField("String", "LITERT_LM_VERSION", "\"${libs.versions.litertLm.get()}\"")
     }
 
@@ -62,6 +79,11 @@ ksp {
 }
 
 dependencies {
+    implementation(libs.sunmobile.agent.core)
+    implementation(libs.sunmobile.agent.adk)
+    implementation(libs.sunmobile.agent.firebase)
+    implementation(libs.sunmobile.agent.litertlm)
+    implementation(libs.sunmobile.agent.mlkit)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
@@ -87,21 +109,14 @@ dependencies {
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     ksp(libs.hilt.compiler)
 
-    // ADK supports the same pickup tool set on LiteRT-LM and Firebase.
-    implementation(libs.google.adk.kotlin.core.android)
-    implementation(libs.google.adk.kotlin.litertlm.android)
-    implementation(libs.google.ai.edge.litertlm.android)
-    implementation(libs.google.adk.kotlin.firebase.android)
-    ksp(libs.google.adk.kotlin.processor)
-
-    // Gemini Nano Agent API and Android AppFunctions tool runtime.
-    implementation(libs.mlkit.genai.agent)
-    implementation(libs.mlkit.genai.prompt)
+    // AppFunctions remain host-owned; ML Kit Agent/Prompt are encapsulated by agent-mlkit.
     implementation(libs.androidx.appfunctions)
     ksp(libs.androidx.appfunctions.compiler)
 
-    implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.ai)
-    implementation(libs.firebase.appcheck.debug)
     implementation(libs.kotlinx.serialization.json)
+
+    // Host-owned Firebase initialization and debug App Check provider.
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.appcheck)
+    debugImplementation(libs.firebase.appcheck.debug)
 }

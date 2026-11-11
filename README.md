@@ -22,9 +22,9 @@ AI Pickup uses a common `PickupAgent` interface with three backend implementatio
 |---|---|---|
 | Firebase | Google ADK for Kotlin + Firebase AI Logic | Cloud model execution and fallback |
 | LiteRT-LM | Google ADK for Kotlin + LiteRT-LM | Locally downloaded on-device model |
-| Gemini Nano | ML Kit GenAI Agent API + Android AppFunctions | AICore-managed on-device model |
+| Gemini Nano | SDK `agent-mlkit` + host Android AppFunctions | AICore-managed on-device model |
 
-Firebase and LiteRT-LM share the ADK agent factory and BOPIS tool set. Gemini Nano uses its separate ML Kit Agent API integration. The implementations share BOPIS instructions and equivalent application capabilities, but do not have identical underlying APIs or session lifecycles.
+Firebase and LiteRT-LM share the SDK ADK agent factory and BOPIS tool set. Gemini Nano uses the SDK's `agent-mlkit` backend provider, which encapsulates ML Kit Agent/Prompt clients, readiness checks and AgentRunner lifecycle. The host retains AppFunctions declarations, manifest registration, KSP processing and business authorization. The implementations share BOPIS instructions and equivalent application capabilities, but do not have identical underlying APIs or session lifecycles.
 
 The associate selects a preferred backend in **AI Model Preferences**. If a preferred on-device backend is unavailable, fails, or returns an invalid pickup action, the app falls back to Firebase for that invocation. The preference itself is not silently changed.
 
@@ -54,6 +54,10 @@ Gemini Nano is provisioned by Android AICore. The app checks ML Kit GenAI availa
 
 See [AI model preferences and on-device AI](docs/AI_PICKUP_LOCAL_MODEL.md) for model metadata, download/integrity behaviour, device checks, runtime compatibility, and testing guidance.
 
+## Reusable agent SDK
+
+The app integrates [SunMobileAiAgentSdk](https://github.com/sundeepkmallick/SunMobileAiAgentSdk) using six published `0.1.0-rc.2` Maven artifacts (the app currently depends on five of them). Maven Central is the default source. For local development, select Maven Local with `-PsunAiSdkSource=mavenLocal` or a sibling SDK checkout with `-PsunAiSdkSource=includeBuild -PsunAiSdkDir=../SunMobileAiAgentSdk`. See [SDK integration and source selection](docs/SUNMOBILE_AI_AGENT_SDK_INTEGRATION.md) for exact commands, persistent local configuration and Android Studio setup.
+
 ## Technology
 
 - Kotlin
@@ -64,7 +68,7 @@ See [AI model preferences and on-device AI](docs/AI_PICKUP_LOCAL_MODEL.md) for m
 - Google ADK for Kotlin
 - Firebase AI Logic
 - LiteRT-LM
-- ML Kit GenAI Agent and Prompt APIs
+- SunMobileAiAgentSdk `agent-mlkit` backend (encapsulates ML Kit GenAI Agent and Prompt APIs)
 - Android AppFunctions
 - Kotlin Serialization
 - Gradle Version Catalog
