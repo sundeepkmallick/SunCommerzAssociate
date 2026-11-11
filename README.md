@@ -56,7 +56,7 @@ See [AI model preferences and on-device AI](docs/AI_PICKUP_LOCAL_MODEL.md) for m
 
 ## Reusable agent SDK
 
-This feature branch integrates [SunMobileAiAgentSdk](https://github.com/sundeepkmallick/SunMobileAiAgentSdk) through Gradle module coordinates. During development, use the sibling SDK checkout with `-PsunAiSdkSource=includeBuild -PsunAiSdkDir=../SunMobileAiAgentSdk`; see [SDK integration and source selection](docs/SUNMOBILE_AI_AGENT_SDK_INTEGRATION.md). The `0.1.0-rc.2` Maven Central path becomes usable only after the six SDK artifacts have been published and independently resolved. Do not infer publication from a successful composite-build build.
+The app integrates [SunMobileAiAgentSdk](https://github.com/sundeepkmallick/SunMobileAiAgentSdk) using six published `0.1.0-rc.2` Maven artifacts (the app currently depends on five of them). Maven Central is the default source. For local development, select Maven Local with `-PsunAiSdkSource=mavenLocal` or a sibling SDK checkout with `-PsunAiSdkSource=includeBuild -PsunAiSdkDir=../SunMobileAiAgentSdk`. See [SDK integration and source selection](docs/SUNMOBILE_AI_AGENT_SDK_INTEGRATION.md) for exact commands, persistent local configuration and Android Studio setup.
 
 ## Technology
 
