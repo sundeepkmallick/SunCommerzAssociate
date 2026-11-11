@@ -114,4 +114,9 @@ dependencies {
     ksp(libs.androidx.appfunctions.compiler)
 
     implementation(libs.kotlinx.serialization.json)
+
+    // Host-owned Firebase initialization and debug App Check provider.
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.appcheck)
+    debugImplementation(libs.firebase.appcheck.debug)
 }
