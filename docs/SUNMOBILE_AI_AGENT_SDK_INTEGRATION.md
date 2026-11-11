@@ -1,5 +1,7 @@
 # SunMobileAiAgentSdk integration
 
+This guide explains how the app selects the source for the six SunMobile AI Agent SDK artifacts. The published version is `0.1.0-rc.2`.
+
 ## SDK modules and coordinates
 
 All SDK artifacts use group `io.github.sundeepkmallick` and share one version.
@@ -13,21 +15,58 @@ All SDK artifacts use group `io.github.sundeepkmallick` and share one version.
 | ML Kit GenAI | `agent-mlkit` |
 | Gemini Nano compatibility adapter | `agent-gemini-nano` |
 
-The app consumes Core, ADK, Firebase, LiteRT-LM and agent-mlkit. Gemini Nano inference, ML Kit Agent/Prompt clients, readiness checks and AgentRunner lifecycle are encapsulated by agent-mlkit. The host retains Android AppFunctions declarations, service implementation, manifest registration, KSP/compiler processing and business authorization.
+The app currently declares Core, ADK, Firebase, LiteRT-LM and `agent-mlkit`. All SDK dependencies use the version in `gradle/libs.versions.toml` (`sunMobileAiAgentSdk`).
 
 ## Select the SDK source
 
-The app keeps the same Maven coordinates in its version catalog. Select the source for the entire SDK group with `-PsunAiSdkSource`:
+The app's `settings.gradle.kts` reads `sunAiSdkSource`. There are three supported values:
 
-| Mode | Gradle command | Behavior |
+| Source | Gradle property | What Gradle resolves |
 |---|---|---|
-| Composite build | `-PsunAiSdkSource=includeBuild` | Uses all matching SDK projects from a checkout; no publication needed |
-| Local Maven | `-PsunAiSdkSource=mavenLocal` | Resolves all SDK artifacts from `~/.m2/repository` |
-| Maven Central | `-PsunAiSdkSource=mavenCentral` | Uses the released version from Maven Central (default) |
+| Maven Central | `mavenCentral` | Published artifacts from Maven Central. This is the default when the property is omitted. |
+| Maven Local | `mavenLocal` | Artifacts previously published to the current user's local Maven repository (`~/.m2/repository`). |
+| Composite build | `includeBuild` | SDK Gradle projects from a local checkout; no Maven publication is required. |
 
-### Composite build (recommended during SDK development)
+The app's Maven coordinates and dependency declarations stay the same in all three modes. Only the source changes.
 
-Keep the repositories as sibling directories:
+### 1. Maven Central (normal use; default)
+
+The six `0.1.0-rc.2` components have been published. From the app repository:
+
+```bash
+./gradlew --refresh-dependencies :app:assembleDebug :app:testDebugUnitTest
+```
+
+You can make the source explicit:
+
+```bash
+./gradlew :app:assembleDebug :app:testDebugUnitTest -PsunAiSdkSource=mavenCentral
+```
+
+When `sunAiSdkSource` is omitted, the build uses this mode. `--refresh-dependencies` is useful after a new SDK version is published or when checking that artifacts resolve remotely rather than from a previous Gradle cache.
+
+### 2. Maven Local (test a locally published SDK build)
+
+First, from the **SDK repository** (not the app repository), build and publish the SDK artifacts to your local Maven repository:
+
+```bash
+cd ../SunMobileAiAgentSdk
+./gradlew publishSdkToMavenLocal
+```
+
+Then, from the **app repository**, select Maven Local:
+
+```bash
+./gradlew :app:assembleDebug :app:testDebugUnitTest \
+  -PsunAiSdkSource=mavenLocal \
+  -PsunAiSdkVersion=0.1.0-rc.2
+```
+
+`sunAiSdkVersion` is optional and defaults to `0.1.0-rc.2`. Set it to the exact version you published locally if it differs. In this mode the build adds `mavenLocal()` restricted to the SDK's group and applies the selected version to all SDK dependencies. Maven Central remains available as the repository fallback, so make sure the intended version is actually present in Maven Local when testing unpublished changes.
+
+### 3. Composite build (active SDK development)
+
+Use this when changing SDK source and app together. Keep the repositories as sibling directories, or provide an absolute path to the SDK checkout:
 
 ```text
 development/
@@ -35,49 +74,68 @@ development/
   SunMobileAiAgentSdk/
 ```
 
-Check out the SDK development branch in the sibling directory, then run from the app:
+From the **app repository**:
 
 ```bash
-./gradlew :app:assembleDebug :app:testDebugUnitTest \\
-  -PsunAiSdkSource=includeBuild \\
+./gradlew :app:assembleDebug :app:testDebugUnitTest \
+  -PsunAiSdkSource=includeBuild \
   -PsunAiSdkDir=../SunMobileAiAgentSdk
 ```
 
-Gradle's composite-build substitution matches each SDK project's group and project name to external module coordinates. Since all SDK projects share the same group, this covers every module in the SDK build without a hand-maintained substitution list.
+`sunAiSdkDir` is optional; it defaults to `../SunMobileAiAgentSdk`. Composite substitution maps the SDK's module projects to their Maven coordinates, so the app uses the checked-out source instead of downloaded SDK binaries. The selected SDK checkout and branch determine the code being compiled.
 
-### Local Maven publication
+## Make a source selection persistent (optional)
 
-From the SDK checkout, publish all SDK modules:
+For repeated local builds, put the properties in the app repository's **untracked/local** `gradle.properties` file (or in your user-level Gradle properties file). Example for a sibling SDK checkout:
 
-```bash
-./gradlew publishSdkToMavenLocal
+```properties
+sunAiSdkSource=includeBuild
+sunAiSdkDir=../SunMobileAiAgentSdk
 ```
 
-Then from the app checkout:
+For Maven Local instead:
 
-```bash
-./gradlew :app:assembleDebug :app:testDebugUnitTest \\
-  -PsunAiSdkSource=mavenLocal \\
-  -PsunAiSdkVersion=0.1.0-rc.2
+```properties
+sunAiSdkSource=mavenLocal
+sunAiSdkVersion=0.1.0-rc.2
 ```
 
-Local mode restricts Maven Local to the SDK group and resolves every SDK module at the local version. The default local version matches the current SDK development branch; override it with `sunAiSdkVersion` if you publish another version.
+For Maven Central, either remove the source properties or set:
 
-### Maven Central
-
-When the SDK release is published, use the default source or specify it explicitly:
-
-```bash
-./gradlew :app:assembleDebug :app:testDebugUnitTest \\
-  -PsunAiSdkSource=mavenCentral
+```properties
+sunAiSdkSource=mavenCentral
 ```
 
-The app's dependency declarations do not need to change when switching sources.
+Do not commit machine-specific paths or local source preferences. To override a persistent setting for one invocation, pass the corresponding `-Pname=value` argument on the command line.
+
+### Android Studio
+
+Open **Settings/Preferences → Build, Execution, Deployment → Build Tools → Gradle** and add the same arguments to **Gradle options** (for example, `-PsunAiSdkSource=includeBuild -PsunAiSdkDir=../SunMobileAiAgentSdk`). Alternatively, use the local `gradle.properties` method above. Ensure Android Studio is using the intended Gradle JDK and reload/sync the project after changing the source.
+
+## Useful commands
+
+Run from the app repository:
+
+```bash
+# Maven Central (default)
+./gradlew --refresh-dependencies :app:assembleDebug
+
+# Maven Local
+./gradlew :app:assembleDebug -PsunAiSdkSource=mavenLocal -PsunAiSdkVersion=0.1.0-rc.2
+
+# Local SDK checkout
+./gradlew :app:assembleDebug -PsunAiSdkSource=includeBuild -PsunAiSdkDir=../SunMobileAiAgentSdk
+
+# Unit tests
+./gradlew :app:testDebugUnitTest
+```
+
+On Windows, use `gradlew.bat` instead of `./gradlew`.
 
 ## Pickup integration and ownership
 
 Firebase AI Logic and LiteRT-LM use the SDK ADK runner/provider, ToolRegistry, JSON-schema validation and ToolExecutor policy. BOPIS-specific tools remain in the host app. The host owns model download/catalogue/checksum/device admission; the SDK LiteRT-LM model factory receives only an already installed and verified file.
 
-GeminiNanoPickupAgent creates a core AgentBuilder with GeminiNanoAgentBackendProvider and GeminiNanoConfiguration. It checks SDK readiness before execution and verifies that getProductStockInStore was invoked. The SDK deliberately does not accept dynamic ToolRegistry tools for this backend: Android AppFunctions dispatch outside the SDK AgentPolicy, so each host AppFunction must independently validate caller identity, arguments, authorization and current business state. The app keeps androidx.appfunctions:appfunctions and its compiler; it no longer declares ML Kit GenAI Agent or Prompt dependencies directly.
+GeminiNanoPickupAgent creates a core AgentBuilder with GeminiNanoAgentBackendProvider and GeminiNanoConfiguration. It checks SDK readiness before execution and verifies that getProductStockInStore was invoked. The SDK deliberately does not accept dynamic ToolRegistry tools for this backend: Android AppFunctions dispatch outside the SDK AgentPolicy, so each host AppFunction must independently validate caller identity, arguments, authorization and current business state. The app keeps androidx.appfunctions:appfunctions and its compiler; it does not declare ML Kit GenAI Agent or Prompt dependencies directly.
 
 A successful compile/unit-test run does not validate Firebase credentials, device AICore/Gemini Nano availability, local-model performance or AppFunctions behavior. Test each backend on supported devices before enabling for associates.
