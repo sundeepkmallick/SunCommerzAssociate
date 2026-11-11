@@ -22,7 +22,7 @@ AI Pickup uses a common `PickupAgent` interface with three backend implementatio
 |---|---|---|
 | Firebase | Google ADK for Kotlin + Firebase AI Logic | Cloud model execution and fallback |
 | LiteRT-LM | Google ADK for Kotlin + LiteRT-LM | Locally downloaded on-device model |
-| Gemini Nano | ML Kit GenAI Agent API + Android AppFunctions | AICore-managed on-device model |
+| Gemini Nano | SDK `agent-mlkit` + host Android AppFunctions | AICore-managed on-device model |
 
 Firebase and LiteRT-LM share the SDK ADK agent factory and BOPIS tool set. Gemini Nano uses the SDK's `agent-mlkit` backend provider, which encapsulates ML Kit Agent/Prompt clients, readiness checks and AgentRunner lifecycle. The host retains AppFunctions declarations, manifest registration, KSP processing and business authorization. The implementations share BOPIS instructions and equivalent application capabilities, but do not have identical underlying APIs or session lifecycles.
 
