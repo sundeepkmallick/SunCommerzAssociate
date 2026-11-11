@@ -1,44 +1,81 @@
 # SunMobileAiAgentSdk integration
 
-## SDK dependency
+## SDK modules and coordinates
 
-The app consumes the released SDK modules from Maven Central. The version is centralized in `gradle/libs.versions.toml` as `sunMobileAiAgentSdk = "0.1.0-rc.1"`.
+All SDK artifacts use group \`io.github.sundeepkmallick\` and share one version.
 
-| Module | Maven coordinate |
+| Module | Maven artifact |
 |---|---|
-| Core | `io.github.sundeepkmallick:agent-core:0.1.0-rc.1` |
-| ADK | `io.github.sundeepkmallick:agent-adk:0.1.0-rc.1` |
-| Firebase | `io.github.sundeepkmallick:agent-firebase:0.1.0-rc.1` |
-| LiteRT-LM | `io.github.sundeepkmallick:agent-litertlm:0.1.0-rc.1` |
+| Core | \`agent-core\` |
+| ADK | \`agent-adk\` |
+| Firebase | \`agent-firebase\` |
+| LiteRT-LM | \`agent-litertlm\` |
+| ML Kit GenAI | \`agent-mlkit\` |
+| Gemini Nano compatibility adapter | \`agent-gemini-nano\` |
 
-Maven Central is already configured in the root dependency repositories. No SDK submodule checkout, composite build, repository credentials or local publication step is required. The published Gradle module metadata/POMs provide the SDK modules' transitive dependencies.
+The app currently consumes Core, ADK, Firebase and LiteRT-LM. The ML Kit modules are available through the same source switch and can be added as dependencies when their APIs are adopted. Gemini Nano continues to use the host ML Kit Agent API + AppFunctions path for now, keeping AppFunctions declarations and authorization under host control.
 
-## Pickup integration
+## Select the SDK source
 
-Firebase AI Logic and LiteRT-LM use the SDK ADK runner/provider, ToolRegistry, JSON-schema validation and ToolExecutor policy. BOPIS-specific tools remain in the host app.
+The app keeps the same Maven coordinates in its version catalog. Select the source for the entire SDK group with \`-PsunAiSdkSource\`:
 
-The SDK tool composition scopes product/store/quantity/radius from the active order workflow, permits only read-only tools, and limits stock checks to the current store or nearby stores discovered by the host's stock-filtering use case. Existing host validation and associate approval remain the source of truth; no model output directly mutates an order.
+| Mode | Gradle command | Behavior |
+|---|---|---|
+| Composite build | \`-PsunAiSdkSource=includeBuild\` | Uses all matching SDK projects from a checkout; no publication needed |
+| Local Maven | \`-PsunAiSdkSource=mavenLocal\` | Resolves all SDK artifacts from \`~/.m2/repository\` |
+| Maven Central | \`-PsunAiSdkSource=mavenCentral\` | Uses the released version from Maven Central (default) |
 
-Gemini Nano continues to use the existing host ML Kit Agent API + AppFunctions path. This is intentional: AppFunctions are declared by the host and their security checks are not intercepted by the SDK's dynamic ToolRegistry.
+### Composite build (recommended during SDK development)
 
-## LiteRT-LM lifecycle
+Keep the repositories as sibling directories:
 
-The host owns model download/catalogue/checksum/device admission. The SDK model factory receives only an already installed and verified file. The host serializes execution and closes each SDK agent/model after the turn.
+\`\`\`text
+development/
+  SunCommerzAssociate/
+  SunMobileAiAgentSdk/
+\`\`\`
 
-## Local build
+Check out the SDK development branch in the sibling directory, then run from the app:
 
-Clone the application normally; no recursive submodule option is needed:
+\`\`\`bash
+./gradlew :app:assembleDebug :app:testDebugUnitTest \\
+  -PsunAiSdkSource=includeBuild \\
+  -PsunAiSdkDir=../SunMobileAiAgentSdk
+\`\`\`
 
-```bash
-git clone https://github.com/sundeepkmallick/SunCommerzAssociate.git
-cd SunCommerzAssociate
-./gradlew :app:assembleDebug :app:testDebugUnitTest
-```
+Gradle's composite-build substitution matches each SDK project's group and project name to external module coordinates. Since all SDK projects share the same group, this covers every module in the SDK build without a hand-maintained substitution list.
 
-The app's Firebase configuration is required for real execution. CI creates a non-production placeholder file only to compile; it cannot run Firebase requests.
+### Local Maven publication
 
-## CI and validation
+From the SDK checkout, publish all SDK modules:
 
-Android CI checks out only the application repository, installs API 37.0, and compiles/tests against the fixed Maven Central SDK release. A green CI run proves compile/unit-test success only. It does not validate Firebase credentials, device AICore/Gemini Nano availability, local-model performance or AppFunctions behavior.
+\`\`\`bash
+./gradlew publishSdkToMavenLocal
+\`\`\`
 
-Before enabling for associates, test Firebase and LiteRT-LM on supported devices, test Gemini Nano on eligible API 36+ devices, and run the regression cases in the SDK migration guide. Keep legacy pickup classes until those checks and rollout telemetry are satisfactory.
+Then from the app checkout:
+
+\`\`\`bash
+./gradlew :app:assembleDebug :app:testDebugUnitTest \\
+  -PsunAiSdkSource=mavenLocal \\
+  -PsunAiSdkVersion=0.1.0-rc.2
+\`\`\`
+
+Local mode restricts Maven Local to the SDK group and resolves every SDK module at the local version. The default local version matches the current SDK development branch; override it with \`sunAiSdkVersion\` if you publish another version.
+
+### Maven Central
+
+When the SDK release is published, use the default source or specify it explicitly:
+
+\`\`\`bash
+./gradlew :app:assembleDebug :app:testDebugUnitTest \\
+  -PsunAiSdkSource=mavenCentral
+\`\`\`
+
+The app's dependency declarations do not need to change when switching sources.
+
+## Pickup integration and ownership
+
+Firebase AI Logic and LiteRT-LM use the SDK ADK runner/provider, ToolRegistry, JSON-schema validation and ToolExecutor policy. BOPIS-specific tools remain in the host app. The host owns model download/catalogue/checksum/device admission; the SDK LiteRT-LM model factory receives only an already installed and verified file.
+
+The app's Gemini Nano AppFunctions remain host-owned. A successful compile/unit-test run does not validate Firebase credentials, device AICore/Gemini Nano availability, local-model performance or AppFunctions behavior. Test each backend on supported devices before enabling for associates.
