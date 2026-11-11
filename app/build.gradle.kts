@@ -9,6 +9,24 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+val sunAiSdkSource = providers.gradleProperty("sunAiSdkSource")
+    .orElse("mavenCentral")
+    .get()
+val localSunAiSdkVersion = providers.gradleProperty("sunAiSdkVersion")
+    .orElse("0.1.0-rc.2")
+    .get()
+
+if (sunAiSdkSource == "mavenLocal") {
+    configurations.configureEach {
+        resolutionStrategy.eachDependency {
+            if (requested.group == "io.github.sundeepkmallick") {
+                useVersion(localSunAiSdkVersion)
+                because("Use the locally published SunMobileAiAgentSdk version")
+            }
+        }
+    }
+}
+
 android {
     namespace = "com.suncommerz.associate"
     compileSdk {
@@ -30,10 +48,10 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "FIREBASE_API_KEY", "\"${firebaseProperty("FIREBASE_API_KEY")}\"")
-        buildConfigField("String", "FIREBASE_APP_ID", "\"${firebaseProperty("FIREBASE_APP_ID")}\"")
-        buildConfigField("String", "FIREBASE_PROJECT_ID", "\"${firebaseProperty("FIREBASE_PROJECT_ID")}\"")
-        buildConfigField("String", "LITERT_LM_VERSION", "\"${libs.versions.litertLm.get()}\"")
+        buildConfigField("String", "FIREBASE_API_KEY", "\"\${firebaseProperty("FIREBASE_API_KEY")}\"")
+        buildConfigField("String", "FIREBASE_APP_ID", "\"\${firebaseProperty("FIREBASE_APP_ID")}\"")
+        buildConfigField("String", "FIREBASE_PROJECT_ID", "\"\${firebaseProperty("FIREBASE_PROJECT_ID")}\"")
+        buildConfigField("String", "LITERT_LM_VERSION", "\"\${libs.versions.litertLm.get()}\"")
     }
 
     packaging {
@@ -61,7 +79,6 @@ ksp {
 }
 
 dependencies {
-    // SunMobileAiAgentSdk is consumed from Maven Central at a fixed release version.
     implementation(libs.sunmobile.agent.core)
     implementation(libs.sunmobile.agent.adk)
     implementation(libs.sunmobile.agent.firebase)
@@ -91,7 +108,7 @@ dependencies {
     implementation(libs.androidx.hilt.lifecycle.viewmodel.compose)
     ksp(libs.hilt.compiler)
 
-    // Gemini Nano Agent API and Android AppFunctions tool runtime.
+    // AppFunctions remain host-owned so the host controls declarations and authorization.
     implementation(libs.mlkit.genai.agent)
     implementation(libs.mlkit.genai.prompt)
     implementation(libs.androidx.appfunctions)
